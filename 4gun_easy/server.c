@@ -22,7 +22,6 @@ int main(int argc, LPTSTR argv[]) {
     printf("There must be at least two arguments\n");
     return -1;
   }
-  printf("anime");
   int i = 0;
   for (i = 0; i < (argc - 2); i++) {
     struct IDK buffer;
@@ -42,7 +41,7 @@ int main(int argc, LPTSTR argv[]) {
           &buffer.startInfo, &buffer.procInfo)) {
       printf("Process %lu started for file\n", buffer.procInfo.dwProcessId);
     } else {
-      printf("CreateProcess failed. error: %Lu\n", GetLastError());
+      printf("CreateProcess failed. error: %lu\n", GetLastError());
       return -2;
     }
   }
@@ -94,9 +93,9 @@ int main(int argc, LPTSTR argv[]) {
   for (i = 0; i < (argc - 2); i++) {
     finish = WaitForSingleObject(arr[i].procInfo.hProcess, INFINITE);
     if (finish == WAIT_OBJECT_0) {
-      printf("Process %Lu finished his work\n", arr[i].procInfo.dwProcessId);
+      printf("Process %lu finished his work\n", arr[i].procInfo.dwProcessId);
     } else {
-      printf("Process %Lu failed his job\n", arr[i].procInfo.dwProcessId);
+      printf("Process %lu failed his job\n", arr[i].procInfo.dwProcessId);
       CloseHandle(arr[i].procInfo.hProcess);
       CloseHandle(arr[i].procInfo.hThread);
       CloseHandle(arr[i].forwardWrite);
