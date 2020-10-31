@@ -23,13 +23,15 @@ int main(int argc, char* argv[]) {
 				return -1;
 		}
 
+
+
 		int i = 0;
 		for (i = 0; i < (argc - 2); i++) {
 				ZeroMemory(&si[i], sizeof(si[i]));
 				si[i].cb = sizeof(si);
 				ZeroMemory(&pi[i], sizeof(pi[i]));
 
-				if (CreateProcess(NULL, "a.exe", NULL, NULL, TRUE, NULL, NULL, NULL,&si[i], &pi[i])) {
+				if (CreateProcess(NULL, "a.exe", NULL, NULL, TRUE, 0, NULL, NULL, &si[i], &pi[i])) {
 						printf("Process %lu started for file\n", pi[i].dwProcessId);
 				} else {
 						printf("CreateProcess failed. error: %Lu\n", GetLastError());
@@ -37,16 +39,15 @@ int main(int argc, char* argv[]) {
 				}
 		}
 
+
+		int done = 0, jobs = (argc - 2), changes = 0;
 		hNamedPipe = CreateNamedPipe(pipeName, PIPE_ACCESS_DUPLEX,
 						PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
-						PIPE_UNLIMITED_INSTANCES, BUF_SIZE, BUF_SIZE, 5000, NULL);
+						PIPE_UNLIMITED_INSTANCES, BUF_SIZE, BUF_SIZE, 0, NULL);
 		if (hNamedPipe == INVALID_HANDLE_VALUE) {
 				printf("Failed to create pipe\n");
 				return -3;
 		}
-
-
-		int done = 0, jobs = (argc - 2), changes = 0;
 
 		while (done != argc - 2) {
 				if (!ConnectNamedPipe(hNamedPipe, NULL)) {
@@ -89,7 +90,6 @@ int main(int argc, char* argv[]) {
 				
 				DisconnectNamedPipe(hNamedPipe);		
 		}
-
 
 		for (i = 0; i < (argc - 2); i++) {
 				finish = WaitForSingleObject(pi[i].hProcess, INFINITE);

@@ -13,17 +13,36 @@ void generate_filenames(CHAR name[], CHAR file1[], CHAR file2[]) {
 		strcat(file1, ".txt");
 		strcat(file2, ".dxd");
 }
+HANDLE my_connect(char pipeName[]) {
+		HANDLE hNamedPipe;
+		while (1) {
+
+				hNamedPipe = CreateFile(pipeName, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+				if (hNamedPipe != INVALID_HANDLE_VALUE) {
+						break;
+				}
+
+				if (GetLastError() != ERROR_PIPE_BUSY) {
+						printf("Couldn't open a pipe: %d\n", GetLastError());
+						return INVALID_HANDLE_VALUE;
+				}
+
+				if (!WaitNamedPipe(pipeName, NMPWAIT_WAIT_FOREVER)) {
+						printf("Couldn't open a pipe: %d\n", GetLastError());
+						return INVALID_HANDLE_VALUE;
+				}
+		}
+		return hNamedPipe;
+}
 
 int make_request(char pipeName[], DWORD *cbWritten, DWORD *cbRead, char request[], char buf[]) {
-		HANDLE hNamedPipe;
 
-		WaitNamedPipe(pipeName, NMPWAIT_WAIT_FOREVER);
-		hNamedPipe = CreateFile(pipeName, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+		HANDLE hNamedPipe = my_connect(pipeName);
+
 		if (hNamedPipe == INVALID_HANDLE_VALUE) {
 				printf("Failed to CreateFile on a pipe: %ld\n", GetLastError());
 				return 1;
 		} 
-
 		if (!WriteFile(hNamedPipe, request, strlen(request) + 1, cbWritten, NULL)) {
 				printf("Error sending signal\n");
 				return 2;
