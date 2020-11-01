@@ -15,7 +15,7 @@ struct IDK {
 
 int main(int argc, LPTSTR argv[]) {
   DWORD cbWritten, cbRead;
-   SECURITY_ATTRIBUTES sa = {sizeof(SECURITY_ATTRIBUTES), NULL, TRUE};
+  SECURITY_ATTRIBUTES sa = {sizeof(SECURITY_ATTRIBUTES), NULL, TRUE};
 
   struct IDK arr[argc - 2];
 
@@ -35,12 +35,12 @@ int main(int argc, LPTSTR argv[]) {
     buffer.startInfo.hStdInput = buffer.forwardRead;
     buffer.startInfo.hStdError = GetStdHandle(STD_ERROR_HANDLE);
     buffer.startInfo.hStdOutput = buffer.backwardWrite;
-    buffer.startInfo.dwFlags = STARTF_USESTDHANDLES; 
+    buffer.startInfo.dwFlags = STARTF_USESTDHANDLES;
 
     arr[i] = buffer;
 
     if (CreateProcess(NULL, "a.exe", NULL, NULL, TRUE, 0, NULL, NULL,
-          &buffer.startInfo, &buffer.procInfo)) {
+                      &buffer.startInfo, &buffer.procInfo)) {
       printf("Process %lu started\n", buffer.procInfo.dwProcessId);
     } else {
       printf("CreateProcess failed. Error: %lu\n", GetLastError());
@@ -52,31 +52,21 @@ int main(int argc, LPTSTR argv[]) {
   int done = 0, jobs = (argc - 2), changes = 0;
   char buffer[256];
   while (done != argc - 2) {
-
     for (int i = 0; i < argc - 2; i++) {
-
       if (ReadFile(arr[i].backwardRead, buffer, 256, &cbRead, NULL)) {
         printf("Received command: %c\n", buffer[0]);
         switch (buffer[0]) {
           case 'n':
-            WriteFile(arr[i].forwardWrite, 
-                argv[argc - jobs], 
-                strlen(argv[argc - jobs]) + 1, 
-                &cbWritten, 
-                NULL);
+            WriteFile(arr[i].forwardWrite, argv[argc - jobs],
+                      strlen(argv[argc - jobs]) + 1, &cbWritten, NULL);
             jobs--;
             break;
           case 'c':
-            WriteFile(arr[i].forwardWrite, 
-                argv[1], 
-                strlen(argv[1]) + 1, 
-                &cbWritten, NULL);
+            WriteFile(arr[i].forwardWrite, argv[1], strlen(argv[1]) + 1,
+                      &cbWritten, NULL);
             break;
           case 'p':
-            WriteFile(arr[i].forwardWrite, 
-                "p", 
-                2, 
-                &cbWritten, NULL);
+            WriteFile(arr[i].forwardWrite, "p", 2, &cbWritten, NULL);
             changes += atoi(buffer + 1);
             done++;
             break;
@@ -88,7 +78,6 @@ int main(int argc, LPTSTR argv[]) {
         printf("Error reading %lu\n", GetLastError());
       }
     }
-
   }
 
   DWORD finish;
