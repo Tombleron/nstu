@@ -15,6 +15,7 @@ struct IDK {
 
 int main(int argc, LPTSTR argv[]) {
   DWORD cbWritten, cbRead;
+   SECURITY_ATTRIBUTES sa = {sizeof(SECURITY_ATTRIBUTES), NULL, TRUE};
 
   struct IDK arr[argc - 2];
 
@@ -25,10 +26,11 @@ int main(int argc, LPTSTR argv[]) {
   int i = 0;
   for (i = 0; i < (argc - 2); i++) {
     struct IDK buffer;
+    ZeroMemory(&buffer.procInfo, sizeof(buffer.procInfo));
     GetStartupInfo(&buffer.startInfo);
 
-    CreatePipe(&buffer.forwardRead, &buffer.forwardWrite, NULL, 0);
-    CreatePipe(&buffer.backwardRead, &buffer.backwardWrite, NULL, 0);
+    CreatePipe(&buffer.forwardRead, &buffer.forwardWrite, &sa, 0);
+    CreatePipe(&buffer.backwardRead, &buffer.backwardWrite, &sa, 0);
 
     buffer.startInfo.hStdInput = buffer.forwardRead;
     buffer.startInfo.hStdError = GetStdHandle(STD_ERROR_HANDLE);
@@ -39,9 +41,9 @@ int main(int argc, LPTSTR argv[]) {
 
     if (CreateProcess(NULL, "a.exe", NULL, NULL, TRUE, 0, NULL, NULL,
           &buffer.startInfo, &buffer.procInfo)) {
-      printf("Process %lu started for file\n", buffer.procInfo.dwProcessId);
+      printf("Process %lu started\n", buffer.procInfo.dwProcessId);
     } else {
-      printf("CreateProcess failed. error: %lu\n", GetLastError());
+      printf("CreateProcess failed. Error: %lu\n", GetLastError());
       return -2;
     }
   }
@@ -83,7 +85,7 @@ int main(int argc, LPTSTR argv[]) {
             break;
         }
       } else {
-        printf("Error reading\n");
+        printf("Error reading %lu\n", GetLastError());
       }
     }
 

@@ -26,14 +26,14 @@ int make_request(HANDLE hRead,
                  char buf[]) {
   if (!WriteFile(hWrite, request, strlen(request) + 1, cbWritten, NULL)) {
     printf("a");
-    fprintf(stderr, "Error sending signal\n");
+    fprintf(stderr, "Error sending signal %lu\n", GetLastError());
     return 2;
   }
 
   if (ReadFile(hRead, buf, BUF_SIZE, cbRead, NULL)) {
     return 0;
   } else {
-    fprintf(stderr, "Error receiving message\n");
+    fprintf(stderr, "Error receiving message%lu\n", GetLastError());
     return 3;
   }
 }
