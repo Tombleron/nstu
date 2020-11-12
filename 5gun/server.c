@@ -1,91 +1,123 @@
 #include <stdio.h>
 #include <windows.h>
 
-int main() {
-    BOOL fReturnCode;
+#define BUF_SIZE 512
+#define MAX_CLIENTS 512
 
-    DWORD cbMessages;
-    DWORD cbMsgNumber;
+BOOL WriteSlot(LPSTR lpszMessage) {
+    LPSTR Mail2 = "\\\\.\\mailslot\\$Channel2$";
+    HANDLE hFile;
 
-    HANDLE hMailslot1, hMailslot2;
-
-    LPSTR lpszReadMailslotName = "\\\\.\\mailslot\\$Channel1$";
-    LPSTR lpszWriteMailslotName = "\\\\*\\mailslot\\$Channel2$";
-
-    char szBuf[512];
-    DWORD cbRead;
+    hFile = CreateFile(Mail2, GENERIC_WRITE, FILE_SHARE_READ,
+                       (LPSECURITY_ATTRIBUTES)NULL, OPEN_EXISTING,
+                       FILE_ATTRIBUTE_NORMAL, (HANDLE)NULL);
+    BOOL fResult;
     DWORD cbWritten;
-    DWORD total = 0;
 
-    char message[80] = {0};
+    fResult = WriteFile(hFile, lpszMessage,
+                        (DWORD)(lstrlen(lpszMessage) + 1) * sizeof(TCHAR),
+                        &cbWritten, (LPOVERLAPPED)NULL);
 
-    FILE *hdl;
-
-    hMailslot1 =
-        CreateMailslot(lpszReadMailslotName, 0, MAILSLOT_WAIT_FOREVER, NULL);
-
-    if (hMailslot1 == INVALID_HANDLE_VALUE) {
-        fprintf(stdout, "CreateMailslot: Error %ld\n", GetLastError());
-        return 0;
+    if (!fResult) {
+        printf("WriteFile failed with %lu.\n", GetLastError());
+        return FALSE;
     }
 
-    fprintf(stdout, "Mailslot created\n");
-    while (1) {
-        fReturnCode =
-            GetMailslotInfo(hMailslot1, NULL, &cbMessages, &cbMsgNumber, NULL);
-        if (!fReturnCode) {
-            fprintf(stdout, "GetMailslotInfo: Error %ld\n", GetLastError());
+    printf("Slot written to successfully.\n");
+
+    CloseHandle(hFile);
+    return TRUE;
+}
+
+BOOL ReadSlot(HANDLE MailSlot) {
+    DWORD cbMessage, cMessage, cbRead;
+    BOOL fResult;
+    LPSTR lpszBuffer;
+
+    cbMessage = cMessage = cbRead = 0;
+
+    fResult = GetMailslotInfo(MailSlot,       // mailslot handle
+                              (LPDWORD)NULL,  // no maximum message size
+                              &cbMessage,     // size of next message
+                              &cMessage,      // number of messages
+                              (LPDWORD)NULL); // no read time-out
+    if (MailSlot == INVALID_HANDLE_VALUE) {
+        printf("<SERVER>: AAAAAAAAAAAAAAAAAAAAAAAAafailed with %lu\n", GetLastError());
+        return FALSE;
+    }
+
+    if (!fResult) {
+        printf("GetMailslotInfo failed with %lu.\n", GetLastError());
+        return FALSE;
+    }
+
+    if (cbMessage == MAILSLOT_NO_MESSAGE) {
+        printf("Waiting for a message...\n");
+        return TRUE;
+    }
+
+    LPSTR response;
+    while (cMessage != 0) {
+
+        fResult = ReadFile(MailSlot, lpszBuffer, cbMessage, &cbRead, NULL);
+
+        if (!fResult) {
+            printf("ReadFile failed with %lu.\n", GetLastError());
+            return FALSE;
+        }
+
+        // Display the message.
+
+        printf("Contents of the mailslot: %s\n", lpszBuffer);
+
+        printf("<SERVER>: \nResponse: \n");
+        scanf("%s", response);
+        if (!lstrcmp(response, "exit")) {
+            return FALSE;
+        }
+        WriteSlot(response);
+
+        fResult = GetMailslotInfo(MailSlot,       // mailslot handle
+                                  (LPDWORD)NULL,  // no maximum message size
+                                  &cbMessage,     // size of next message
+                                  &cMessage,      // number of messages
+                                  (LPDWORD)NULL); // no read time-out
+
+        if (!fResult) {
+            printf("GetMailslotInfo failed (%lu)\n", GetLastError());
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+BOOL MakeSlot(LPSTR lpszSlotName, HANDLE Mail) {
+    Mail = CreateMailslot(lpszSlotName, 0, MAILSLOT_WAIT_FOREVER,
+                          (LPSECURITY_ATTRIBUTES)NULL);
+
+    if (Mail == INVALID_HANDLE_VALUE) {
+        printf("<SERVER>: CreateMailslot failed with %lu\n", GetLastError());
+        return FALSE;
+    } else {
+        printf("<SERVER>: Mailslot created successfully.\n");
+        return TRUE;
+    }
+}
+
+int main() {
+    HANDLE hSlot;
+
+    LPSTR Mail = "\\\\.\\mailslot\\$Channel1$";
+    MakeSlot(Mail, hSlot);
+    if (hSlot == INVALID_HANDLE_VALUE) {
+        printf("<SERVER>: AAAAAAAAAAAAAAAAAAAAAAAAafailed with %lu\n", GetLastError());
+        return FALSE;
+    }
+    while (TRUE) {
+        if (!ReadSlot(hSlot)) {
             break;
-        }
-
-        if (cbMsgNumber != 0) {
-            if (ReadFile(hMailslot1, szBuf, 512, &cbRead, NULL)) {
-                printf("Received: <%s>\n", szBuf);
-                if (!strcmp(szBuf, "exit"))
-                    break;
-                else {
-                    hMailslot2 = CreateFile(lpszWriteMailslotName,
-                                            GENERIC_WRITE, FILE_SHARE_READ,
-                                            NULL, OPEN_EXISTING, 0, NULL);
-                    if (hMailslot2 == INVALID_HANDLE_VALUE) {
-                        fprintf(stdout, "CreateFile for send: Error %ld\n",
-                                GetLastError());
-                        _getch();
-                        break;
-                    }
-                    if (hdl = fopen(szBuf, "rt")) {
-                        while (!feof(hdl)) {
-                            if ((char)fgetc(hdl) == 0x20)
-                                total++;
-                        }
-                        sprintf(message, "(Server): file:%s, spaces = %d\n",
-                                szBuf, total);
-                        WriteFile(GetStdHandle(STD_ERROR_HANDLE), message,
-                                  strlen(message), &cbWritten, NULL);
-                        sprintf(message, "%d", total);
-                        WriteFile(hMailslot2, message, strlen(message) + 1,
-                                  &cbWritten, NULL);
-                        printf("Bytes sent %d\n", cbWritten);
-                        fclose(hdl);
-                    } else {
-                        sprintf(message, "(Server)Can't open %s!", szBuf);
-                        WriteFile(GetStdHandle(STD_ERROR_HANDLE), message,
-                                  strlen(message) + 1, &cbWritten, NULL);
-                        printf("\n");
-                        WriteFile(hMailslot2, message, strlen(message) + 1,
-                                  &cbWritten, NULL);
-                        printf("Bytes sent %d\n", cbWritten);
-                    }
-                }
-            } else {
-                fprintf(stdout, "ReadFile: Error %ld\n", GetLastError());
-                getch();
-                break;
-            }
-        }
-        Sleep(500);
+        };
+        Sleep(3000);
     }
-    CloseHandle(hMailslot1);
-    CloseHandle(hMailslot2);
     return 0;
 }
