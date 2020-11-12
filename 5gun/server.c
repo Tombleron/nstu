@@ -6,6 +6,7 @@
 #define MAX_CLIENTS 512
 
 HANDLE MailSlot;
+LPSTR Mail = "\\\\.\\mailslot\\$Channel2$";
 
 int (*process_text)(char text[], char output[], int mod_count, int mod_max,
                     int buf_size);
@@ -43,7 +44,8 @@ int ProcessResponse(LPSTR resp) {
     int rCount;
     rCount = atoi(sArg);
 
-    printf("<SERVER>: Filename is %s\n<SERVER>: Max changes is %d", inName, rCount);
+    printf("<SERVER>: Filename is %s\n<SERVER>: Max changes is %d", inName,
+           rCount);
 
     hIn = CreateFile(inName, GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
     if (hIn == INVALID_HANDLE_VALUE) {
@@ -110,7 +112,7 @@ BOOL WriteSlot(LPSTR lpszMessage) {
 BOOL ReadSlot() {
     DWORD cbMessage, cMessage, cbRead;
     BOOL fResult;
-    LPSTR lpszBuffer;
+    LPTSTR lpszBuffer;
 
     cbMessage = cMessage = cbRead = 0;
 
@@ -132,7 +134,8 @@ BOOL ReadSlot() {
 
     while (cMessage != 0) {
 
-        fResult = ReadFile(MailSlot, lpszBuffer, cbMessage, &cbRead, NULL);
+        ZeroMemory(lpszBuffer, BUF_SIZE);
+        fResult = ReadFile(MailSlot, lpszBuffer, BUF_SIZE, &cbRead, NULL);
 
         if (!fResult) {
             printf("<SERVER>: ReadFile failed with %lu.\n", GetLastError());
@@ -140,7 +143,6 @@ BOOL ReadSlot() {
         }
 
         // Display the message.
-
         printf("<SERVER>: Contents of the mailslot: %s\n", lpszBuffer);
         int r = ProcessResponse(lpszBuffer);
         printf("<SERVER>: Finished with %d changes\n", r);
@@ -175,8 +177,6 @@ BOOL MakeSlot(LPSTR lpszSlotName) {
 }
 
 int main() {
-
-    LPSTR Mail = "\\\\.\\mailslot\\$Channel2";
 
     MakeSlot(Mail);
 

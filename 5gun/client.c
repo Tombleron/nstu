@@ -12,7 +12,11 @@ BOOL WriteSlot(LPSTR lpszMessage) {
 
     hFile = CreateFile(Mail2, GENERIC_WRITE, FILE_SHARE_READ,
                        (LPSECURITY_ATTRIBUTES)NULL, OPEN_EXISTING,
-                       FILE_ATTRIBUTE_NORMAL, (HANDLE)NULL);
+                       0, (HANDLE)NULL);
+    if (hFile == INVALID_HANDLE_VALUE) {
+        printf("<CLIENT>: CreateMailslot failed with %lu\n", GetLastError());
+        return FALSE;
+    } 
     BOOL fResult;
     DWORD cbWritten;
 
@@ -41,8 +45,7 @@ BOOL ReadSlot() {
     //fResult = GetMailslotInfo(MailSlot,       // mailslot handle
     //                          (LPDWORD)NULL,  // no maximum message size
     //                          &cbMessage,     // size of next message
-    //                          &cMessage,      // number of messages
-    //                          (LPDWORD)NULL); // no read time-out
+    //                          &cMessage,      // number of messages (LPDWORD)NULL); // no read time-out
 
     //if (!fResult) {
     //    printf("<CLIENT>: GetMailslotInfo failed with %lu.\n", GetLastError());
