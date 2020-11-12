@@ -17,15 +17,15 @@ BOOL WriteSlot(LPSTR lpszMessage) {
     DWORD cbWritten;
 
     fResult = WriteFile(hFile, lpszMessage,
-                        (DWORD)(lstrlen(lpszMessage) + 1) * sizeof(TCHAR),
+                       lstrlen(lpszMessage)+1, 
                         &cbWritten, (LPOVERLAPPED)NULL);
 
     if (!fResult) {
-        printf("WriteFile failed with %lu.\n", GetLastError());
+        printf("<CLIENT>: WriteFile failed with %lu.\n", GetLastError());
         return FALSE;
     }
 
-    printf("Slot written to successfully.\n");
+    printf("<CLIENT>: Slot written to successfully.\n");
 
     CloseHandle(hFile);
     return TRUE;
@@ -38,54 +38,54 @@ BOOL ReadSlot() {
 
     cbMessage = cMessage = cbRead = 0;
 
-    fResult = GetMailslotInfo(MailSlot,       // mailslot handle
-                              (LPDWORD)NULL,  // no maximum message size
-                              &cbMessage,     // size of next message
-                              &cMessage,      // number of messages
-                              (LPDWORD)NULL); // no read time-out
+    //fResult = GetMailslotInfo(MailSlot,       // mailslot handle
+    //                          (LPDWORD)NULL,  // no maximum message size
+    //                          &cbMessage,     // size of next message
+    //                          &cMessage,      // number of messages
+    //                          (LPDWORD)NULL); // no read time-out
 
-    if (!fResult) {
-        printf("GetMailslotInfo failed with %lu.\n", GetLastError());
-        return FALSE;
-    }
+    //if (!fResult) {
+    //    printf("<CLIENT>: GetMailslotInfo failed with %lu.\n", GetLastError());
+    //    return FALSE;
+    //}
 
-    if (cbMessage == MAILSLOT_NO_MESSAGE) {
-        printf("Waiting for a message...\n");
-        return TRUE;
-    }
+    //if (cbMessage == MAILSLOT_NO_MESSAGE) {
+    //    printf("<CLIENT>: Waiting for a message...\n");
+    //    return TRUE;
+    //}
 
-    LPSTR response;
-    while (cMessage != 0) {
+    char response[BUF_SIZE];
+    //while (cMessage != 0) {
 
-        fResult = ReadFile(MailSlot, lpszBuffer, cbMessage, &cbRead, NULL);
+        //fResult = ReadFile(MailSlot, lpszBuffer, cbMessage, &cbRead, NULL);
 
-        if (!fResult) {
-            printf("ReadFile failed with %lu.\n", GetLastError());
-            return FALSE;
-        }
+        //if (!fResult) {
+        //    printf("<CLIENT>: ReadFile failed with %lu.\n", GetLastError());
+        //    return FALSE;
+        //}
 
-        // Display the message.
+        //// Display the message.
 
-        printf("Contents of the mailslot: %s\n", lpszBuffer);
+        //printf("<CLIENT>:Contents of the mailslot: %s\n", lpszBuffer);
 
-        printf("<SERVER>: \nResponse: \n");
+        printf("<CLIENT>: \nResponse: \n");
         scanf("%s", response);
         if (!lstrcmp(response, "exit")) {
             return FALSE;
         }
         WriteSlot(response);
 
-        fResult = GetMailslotInfo(MailSlot,       // mailslot handle
-                                  (LPDWORD)NULL,  // no maximum message size
-                                  &cbMessage,     // size of next message
-                                  &cMessage,      // number of messages
-                                  (LPDWORD)NULL); // no read time-out
+        //fResult = GetMailslotInfo(MailSlot,       // mailslot handle
+                                  //(LPDWORD)NULL,  // no maximum message size
+                                  //&cbMessage,     // size of next message
+                                  //&cMessage,      // number of messages
+                                  //(LPDWORD)NULL); // no read time-out
 
-        if (!fResult) {
-            printf("GetMailslotInfo failed (%lu)\n", GetLastError());
-            return FALSE;
-        }
-    }
+        //if (!fResult) {
+        //    printf("<CLIENT>:GetMailslotInfo failed (%lu)\n", GetLastError());
+        //    return FALSE;
+        //}
+    //}
     return TRUE;
 }
 
@@ -94,10 +94,10 @@ BOOL MakeSlot(LPSTR lpszSlotName) {
                           (LPSECURITY_ATTRIBUTES)NULL);
 
     if (MailSlot == INVALID_HANDLE_VALUE) {
-        printf("<SERVER>: CreateMailslot failed with %lu\n", GetLastError());
+        printf("<CLIENT>: CreateMailslot failed with %lu\n", GetLastError());
         return FALSE;
     } else {
-        printf("<SERVER>: Mailslot created successfully.\n");
+        printf("<CLIENT>: Mailslot created successfully.\n");
         return TRUE;
     }
 }
@@ -105,11 +105,9 @@ BOOL MakeSlot(LPSTR lpszSlotName) {
 int main() {
 
     LPSTR Mail = "\\\\.\\mailslot\\$Channel1$";
+
     MakeSlot(Mail);
-    if (MailSlot== INVALID_HANDLE_VALUE) {
-        printf("<SERVER>: AAAAAAAAAAAAAAAAAAAAAAAAafailed with %lu\n", GetLastError());
-        return FALSE;
-    }
+
     while (TRUE) {
         if (!ReadSlot(MailSlot)) {
             break;
