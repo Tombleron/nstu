@@ -4,6 +4,8 @@
 #define BUF_SIZE 512
 #define MAX_CLIENTS 512
 
+HANDLE MailSlot;
+
 BOOL WriteSlot(LPSTR lpszMessage) {
     LPSTR Mail2 = "\\\\.\\mailslot\\$Channel2$";
     HANDLE hFile;
@@ -29,7 +31,7 @@ BOOL WriteSlot(LPSTR lpszMessage) {
     return TRUE;
 }
 
-BOOL ReadSlot(HANDLE MailSlot) {
+BOOL ReadSlot() {
     DWORD cbMessage, cMessage, cbRead;
     BOOL fResult;
     LPSTR lpszBuffer;
@@ -41,10 +43,6 @@ BOOL ReadSlot(HANDLE MailSlot) {
                               &cbMessage,     // size of next message
                               &cMessage,      // number of messages
                               (LPDWORD)NULL); // no read time-out
-    if (MailSlot == INVALID_HANDLE_VALUE) {
-        printf("<SERVER>: AAAAAAAAAAAAAAAAAAAAAAAAafailed with %lu\n", GetLastError());
-        return FALSE;
-    }
 
     if (!fResult) {
         printf("GetMailslotInfo failed with %lu.\n", GetLastError());
@@ -91,11 +89,11 @@ BOOL ReadSlot(HANDLE MailSlot) {
     return TRUE;
 }
 
-BOOL MakeSlot(LPSTR lpszSlotName, HANDLE Mail) {
-    Mail = CreateMailslot(lpszSlotName, 0, MAILSLOT_WAIT_FOREVER,
+BOOL MakeSlot(LPSTR lpszSlotName) {
+    MailSlot = CreateMailslot(lpszSlotName, 0, MAILSLOT_WAIT_FOREVER,
                           (LPSECURITY_ATTRIBUTES)NULL);
 
-    if (Mail == INVALID_HANDLE_VALUE) {
+    if (MailSlot == INVALID_HANDLE_VALUE) {
         printf("<SERVER>: CreateMailslot failed with %lu\n", GetLastError());
         return FALSE;
     } else {
@@ -105,16 +103,15 @@ BOOL MakeSlot(LPSTR lpszSlotName, HANDLE Mail) {
 }
 
 int main() {
-    HANDLE hSlot;
 
     LPSTR Mail = "\\\\.\\mailslot\\$Channel1$";
-    MakeSlot(Mail, hSlot);
-    if (hSlot == INVALID_HANDLE_VALUE) {
+    MakeSlot(Mail);
+    if (MailSlot== INVALID_HANDLE_VALUE) {
         printf("<SERVER>: AAAAAAAAAAAAAAAAAAAAAAAAafailed with %lu\n", GetLastError());
         return FALSE;
     }
     while (TRUE) {
-        if (!ReadSlot(hSlot)) {
+        if (!ReadSlot(MailSlot)) {
             break;
         };
         Sleep(3000);
