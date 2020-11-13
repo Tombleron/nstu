@@ -39,7 +39,7 @@ BOOL ReadSlot() {
     char response[BUF_SIZE];
     char number[BUF_SIZE];
 
-    printf("<CLIENT>: Enter name if file: ");
+    printf("<CLIENT>: Enter name of file: ");
     scanf("%s", response);
 
     if (!lstrcmp(response, "exit")) {
