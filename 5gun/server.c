@@ -18,7 +18,7 @@ void generate_filenames(CHAR name[], CHAR file1[], CHAR file2[]) {
     strcat(file2, ".dxd");
 }
 
-int SplitArguments(LPSTR string, CHAR delim) {
+int SplitArguments(char* string, CHAR delim) {
     int i = 0;
     for (i = 0; i < lstrlen(string) - 1; i++) {
         if (string[i] == delim) {
@@ -26,25 +26,22 @@ int SplitArguments(LPSTR string, CHAR delim) {
             break;
         }
     }
-    return i + 1;
+    return atoi(&string[i+1]);
 }
 
-int ProcessResponse(LPSTR resp) {
+int ProcessResponse(char* resp) {
 
     HANDLE hIn, hOut, hLib;
     DWORD dIn, dOut;
 
-    LPSTR buf, outbuf;
-
-    LPSTR fArg = resp, sArg = resp + SplitArguments(resp, ' ');
-
-    LPSTR inName, outName;
-    generate_filenames(fArg, inName, outName);
-
     int rCount;
-    rCount = atoi(sArg);
+    char buf[BUF_SIZE], outbuf[BUF_SIZE];
+    rCount = SplitArguments(resp, ' ');
+    char inName[BUF_SIZE], outName[BUF_SIZE];
+    generate_filenames(&resp[0], inName, outName);
 
-    printf("<SERVER>: Filename is %s\n<SERVER>: Max changes is %d", inName,
+
+    printf("<SERVER>: Filename is %s\n<SERVER>: Max changes is %d\n", inName,
            rCount);
 
     hIn = CreateFile(inName, GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
@@ -112,7 +109,7 @@ BOOL WriteSlot(LPSTR lpszMessage) {
 BOOL ReadSlot() {
     DWORD cbMessage, cMessage, cbRead;
     BOOL fResult;
-    LPTSTR lpszBuffer;
+    char lpszBuffer[BUF_SIZE];
 
     cbMessage = cMessage = cbRead = 0;
 
@@ -135,8 +132,8 @@ BOOL ReadSlot() {
     while (cMessage != 0) {
 
         ZeroMemory(lpszBuffer, BUF_SIZE);
-        fResult = ReadFile(MailSlot, lpszBuffer, BUF_SIZE, &cbRead, NULL);
-
+        fResult = ReadFile(MailSlot, lpszBuffer, cbMessage, &cbRead, NULL);
+        lpszBuffer[cbMessage] = '\0';
         if (!fResult) {
             printf("<SERVER>: ReadFile failed with %lu.\n", GetLastError());
             return FALSE;
