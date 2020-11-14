@@ -93,6 +93,7 @@ int ProcessResponse(char *resp) {
 
 int main() {
     DWORD dReturnCode;
+    char response[BUF_SIZE];
 
     hMutexSend = CreateMutex(NULL, FALSE, lpMutexSendName);
     hMutexRecv = CreateMutex(NULL, FALSE, lpMutexRecvName);
@@ -122,14 +123,17 @@ int main() {
         printf("<SERVER>: Error <%lu> mapping file\n", GetLastError());
     }
 
+    printf("<SERVER>: Starting listening loop\n");
+
     while (1) {
+
         hMutexTermination = OpenMutex(MUTEX_ALL_ACCESS, FALSE, lpMutexTermName);
 
         if (hMutexTermination == NULL) {
             continue;
         }
 
-        printf("<SERVER>: WAiting for message\n");
+        printf("<SERVER>: Waiting for message\n");
 
         dReturnCode = WaitForSingleObject(hMutexTermination, 500);
 
@@ -143,11 +147,17 @@ int main() {
         if (!strcmp((LPSTR)lpFileMap, "")) {
             ReleaseMutex(hMutexSend);
             continue;
+        } else if (!strcmp((LPSTR)lpFileMap, "exit")) {
+            printf("<SERVER> Got termination signal\nExiting....\n");
+            break;
         }
 
         printf("<SERVER>: Got command <<%s>>\n", (LPSTR)lpFileMap);
 
-        ProcessResponse(lpFileMap);
+        sprintf(response, "\n***<SERVER> Finnished with %d changes***\n",
+                ProcessResponse(lpFileMap));
+
+        strcpy((char *)lpFileMap, response);
 
         ReleaseMutex(hMutexSend);
         ReleaseMutex(hMutexRecv);

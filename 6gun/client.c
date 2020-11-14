@@ -40,8 +40,8 @@ int main() {
         return 0;
     }
 
-    hFileMapping = OpenFileMapping(FILE_MAP_READ || FILE_MAP_WRITE, FALSE,
-                                   lpFileShareName);
+    hFileMapping =
+        OpenFileMapping(FILE_MAP_READ | FILE_MAP_WRITE, FALSE, lpFileShareName);
 
     if (hFileMapping == NULL) {
         printf("<CLIENT>: Error <%lu> openning file mapping\n", GetLastError());
@@ -64,6 +64,7 @@ int main() {
         scanf("%s", response);
 
         if (!lstrcmp(response, "exit")) {
+            strcpy((char *)lpFileMap, "exit");
             break;
         }
 
@@ -75,6 +76,8 @@ int main() {
 
         strcpy((char *)lpFileMap, response);
 
+        ReleaseMutex(hMutexSend);
+        ReleaseMutex(hMutexRecv);
         dReturnCode = WaitForSingleObject(hMutexRecv, INFINITE);
         dReturnCode = WaitForSingleObject(hMutexSend, INFINITE);
 
@@ -86,7 +89,7 @@ int main() {
         dReturnCode = WaitForSingleObject(hMutexRecv, INFINITE);
 
         if (dReturnCode == WAIT_OBJECT_0) {
-            printf("<CLIENT>: Server's response is <<%s>>\n", (char*)lpFileMap);
+            printf("<CLIENT>: Server's response is %s", (char *)lpFileMap);
         } else {
             printf("<CLIENT>: Error retieving response\n");
             break;
