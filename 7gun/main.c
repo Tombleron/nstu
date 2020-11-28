@@ -26,11 +26,10 @@ int main(int argc, char *argv[]) {
     MYDATA pDataArray[MAX_THREADS];
     DWORD dwThreadIdArray[MAX_THREADS];
     HANDLE hThreadArray[MAX_THREADS];
-    char message[BUF_SIZE] = "Not enough arguments. There must be at least 3 of them. Usage: ./thread.exe [changes] [filenames]\n";
+    char message[BUF_SIZE] = "Not enough arguments. There must be at least 3 of them. Usage: ./thread.exe [changes] [filenames]";
 
     if (argc < 3) {
         DisplayMessage(SERVER_ERROR, message, 0, TRUE);
-        printf("%s", message);
         exit(-1);
     }
 
@@ -57,6 +56,7 @@ int main(int argc, char *argv[]) {
         // This will automatically clean up threads and memory.
 
         if (hThreadArray[i] == NULL) {
+            DisplayMessage(SERVER_ERROR, "anime", 0, FALSE);
             ExitProcess(3);
         }
     } // End of main thread creation loop.
@@ -81,25 +81,17 @@ int main(int argc, char *argv[]) {
 
 DWORD WINAPI MyThreadFunction(LPVOID lpParam) {
 
-    HANDLE hStdout;
     PMYDATA pDataArray;
-
-    // Make sure there is a console to receive output results.
-
-    hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
-    if (hStdout == INVALID_HANDLE_VALUE) {
-        return 1;
-    }
+    char message[BUF_SIZE];
 
     // Cast the parameter to the correct data type.
     // The pointer is known to be valid because
     // it was checked for NULL before the thread was created.
-
     pDataArray = (PMYDATA)lpParam;
 
-    // Print the parameter values using thread-safe functions.
-
-    printf("Parameters = %s, %d\n", pDataArray->file, pDataArray->num);
+    // Print the parameter values. 
+    sprintf(message, "Parameters = %s, %d\n", pDataArray->file, pDataArray->spaces);
+    DisplayMessage(THREAD, message, pDataArray->num, FALSE);
 
     return 0;
 }
@@ -110,20 +102,21 @@ void DisplayMessage(MessageType type, char* message, int num, BOOL GetResponse) 
         printf("<SERVER> %s", message);
         break;
     case SERVER_ERROR:
-        printf("\033[0;31m");
-        printf("<SERVER> %s", message);
-        printf("\033[0m");
+        printf("\x1b[31m");
+        printf("<SERVER> [Error: %lu] %s", GetLastError(), message);
+        printf("\x1b[0m");
         break;
     case THREAD:
-        printf("<THREAD %d> %s", num, message);
+        printf("<THREAD №%d> %s", num, message);
         break;
     case THREAD_ERROR:
         printf("\033[0;31m");
-        printf("<THREAD %d> %s", num, message);
+        printf("<THREAD №%d> %s", num, message);
         printf("\033[0m");
         break;
   }
   if (GetResponse) {
     scanf("%s", message);
+    printf("%s", message);
   }
 }
