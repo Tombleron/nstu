@@ -1,1 +1,39 @@
-
+[1;38m<SERVER> Creating mutex
+[0m[1;38m<SERVER> Capturing the mutex
+[0m[1;38m<SERVER> Starting thread #1
+[0m[1;38m<SERVER> Thread #1 successfully started
+[0m[1;38m<SERVER> Starting thread #2
+[0m[1;38m<SERVER> Thread #2 successfully started
+[0m[1;38m<SERVER> Starting thread #3
+[0m[1;38m<SERVER> Thread #3 successfully started
+[0m[1;38m<SERVER> Starting thread #4
+[0m[0;33m<THREAD #3> Waiting for the mutex
+[0m[0;31m<THREAD #1> Waiting for the mutex
+[0m[0;32m<THREAD #2> Waiting for the mutex
+[0m[1;38m<SERVER> Thread #4 successfully started
+[0m[1;38m<SERVER> Releasing mutex
+[0m[0;33m<THREAD #3> Captured the mutex
+[0m[0;33m<THREAD #3> File: 3.txt, Changes: 3
+[0m[0;33m<THREAD #3> Trying to load library
+[0m[1;38m<SERVER> Waiting for threads to finish
+[0m[0;34m<THREAD #4> Waiting for the mutex
+[0m[0;33m<THREAD #3> Processing text
+[0m[0;33m<THREAD #3> Finished with 3 changes
+[0m[0;33m<THREAD #3> Releasing the mutex
+[0m[0;31m<THREAD #1> Captured the mutex
+[0m[0;31m<THREAD #1> File: 1.txt, Changes: 3
+[0m[0;31m<THREAD #1> Trying to load library
+[0m[0;31m<THREAD #1> Processing text
+[0m[0;31m<THREAD #1> Finished with 3 changes
+[0m[0;31m<THREAD #1> Releasing the mutex
+[0m[0;32m<THREAD #2> Captured the mutex
+[0m[0;32m<THREAD #2> File: 2.txt, Changes: 3
+[0m[0;32m<THREAD #2> Trying to load library
+[0m[0;32m<THREAD #2> Processing text
+[0m[0;32m<THREAD #2> Finished with 3 changes
+[0m[0;32m<THREAD #2> Releasing the mutex
+[0m[0;34m<THREAD #4> Captured the mutex
+[0m[0;34m<THREAD #4> File: not_existing_file, Changes: 3
+[0m[1;34m<THREAD №4>[0m[1;31m Can't open input file
+[0m[0;34m<THREAD #4> Releasing the mutex
+[0m
