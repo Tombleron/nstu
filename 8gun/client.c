@@ -17,14 +17,10 @@ typedef enum MessageType {
 void DisplayMessage(MessageType type, char *message, BOOL GetResponse) {
     switch (type) {
     case CLIENT:
-        printf("\033[1;38m");
         printf("<CLIENT> %s", message);
-        printf("\033[0m");
         break;
     case CLIENT_ERROR:
-        printf("\033[1;31m");
         printf("<CLIENT> %s", message);
-        printf("\033[0m");
         break;
     }
     if (GetResponse) {
@@ -94,12 +90,8 @@ int main(int argc, char *argv[]) {
             return -1;
         }
 
-        printf("\033[1;38m");
         printf("<SERVER> %s", buff);
-        printf("\033[0m");
-        printf("\033[1;32m");
         printf("[USER] ");
-        printf("\033[0m");
         ZeroMemory(buff, 1024);
         scanf("%s", buff);
 

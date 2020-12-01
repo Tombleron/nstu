@@ -27,24 +27,16 @@ void DisplayMessage(MessageType type, char *message, char* num,
                     BOOL GetResponse) {
     switch (type) {
     case SERVER:
-        printf("\033[1;38m");
         printf("<SERVER> %s", message);
-        printf("\033[0m");
         break;
     case SERVER_ERROR:
-        printf("\033[1;31m");
         printf("<SERVER> %s", message);
-        printf("\033[0m");
         break;
     case THREAD:
-        printf("\033[0;32m");
         printf("<THREAD #%s> %s", num, message);
-        printf("\033[0m");
         break;
     case THREAD_ERROR:
-        printf("\033[1;32m");
-        printf("<THREAD №%s>\033[0m\033[1;31m %s", num, message);
-        printf("\033[0m");
+        printf("<THREAD №%s> %s", num, message);
         break;
     }
     if (GetResponse) {
