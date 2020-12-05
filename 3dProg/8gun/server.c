@@ -239,13 +239,11 @@ int main(int argc, char**argv) {
                                  &clientAddrSize))) {
         HOSTENT *hst;
         hst = gethostbyaddr((char *)&clientAddr.sin_addr.s_addr, 4, AF_INET);
-  printf("ANIME\n");
         sprintf(message, "New connection established: \"%s\".\n",
                (hst) ? hst->h_name : "");
-  printf("ANIME\n");
         DWORD thID;
         MYDATA data;
-        strcpy(data.num, hst->h_name);
+        strcpy(data.num, (hst) ? hst->h_name : "");
         data.socket = clientSocket;
 
         CreateThread(NULL, 0, clientProcessing, &data, 0, &thID);

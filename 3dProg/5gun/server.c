@@ -18,7 +18,7 @@ void generate_filenames(CHAR name[], CHAR file1[], CHAR file2[]) {
     strcat(file2, ".dxd");
 }
 
-int SplitArguments(char* string, CHAR delim) {
+int SplitArguments(char *string, CHAR delim) {
     int i = 0;
     for (i = 0; i < lstrlen(string) - 1; i++) {
         if (string[i] == delim) {
@@ -26,10 +26,10 @@ int SplitArguments(char* string, CHAR delim) {
             break;
         }
     }
-    return atoi(&string[i+1]);
+    return atoi(&string[i + 1]);
 }
 
-int ProcessResponse(char* resp) {
+int ProcessResponse(char *resp) {
 
     HANDLE hIn, hOut, hLib;
     DWORD dIn, dOut;
@@ -39,7 +39,6 @@ int ProcessResponse(char* resp) {
     rCount = SplitArguments(resp, ' ');
     char inName[BUF_SIZE], outName[BUF_SIZE];
     generate_filenames(&resp[0], inName, outName);
-
 
     printf("<SERVER>: Filename is %s\n<SERVER>: Max changes is %d\n", inName,
            rCount);
