@@ -1,208 +1,181 @@
 #include "server.c"
-#include <stdio.h>
-#include <string.h>
 #include <windows.h>
+#include <stdio.h>
+#include <conio.h>
 
-#define SVCNAME "mySVC"
-
-SERVICE_STATUS gSvcStatus;
-SERVICE_STATUS_HANDLE gSvcStatusHandle;
-HANDLE ghSvcStopEvent = NULL;
-
-VOID SvcInstall(void);
-VOID WINAPI SvcCtrlHandler(DWORD);
-VOID WINAPI SvcMain(DWORD, LPTSTR *);
-
-VOID ReportSvcStatus(DWORD, DWORD, DWORD);
-VOID SvcInit(DWORD, LPTSTR *);
-VOID SvcReportEvent(LPTSTR);
-
+DWORD dwErrCode;
+SERVICE_STATUS ss;
+SERVICE_STATUS_HANDLE ssHandle;
+#define MYServiceName "mySVC"
 extern int Server();
-extern int ServiceStart(int, char **);
+extern int ServiceStart();
 extern void ServiceStop();
 
-/* Входная точка процесса */
-int main(int argc, char *argv[]) {
-    // TODO: Расписать возможные аргументы
-    if (argc < 2) {
-        printf("Not enough arguments. See help for more information\n");
-        return 1;
-    }
-    // TODO: Сделать help
+void WINAPI ServiceMain(DWORD dwArgc, LPSTR *lpszArv);
+void WINAPI ServiceControl(DWORD dwControlCode);
+void ReportStatus(DWORD dwCurrentState,	DWORD dwWin32ExitCode, DWORD dwWaitHint);
+PROCESS_INFORMATION pid;
 
-    /* Если параметр коммандной строки "install", устанавливаем сервис
-     * В другом случае сервис скорее всего уже был установлен */
-    if (!strcmp(argv[1], "install")) {
-        SvcInstall();
-        return 1;
-    }
+int SvcReportEvent(const char* text)
+{
 
-    /* Таблица точек входа */
-    SERVICE_TABLE_ENTRY DispatchTable[] = {
-        {SVCNAME, (LPSERVICE_MAIN_FUNCTION)SvcMain}, {NULL, NULL}};
-
-    if (!StartServiceCtrlDispatcher(DispatchTable)) {
-        SvcReportEvent("StartServiceCtrlDispatcher");
-    }
+	DWORD res, Sz;
+	HANDLE hFile;
+	char buf[256];
+	hFile = CreateFile("C:\\logfile.log", GENERIC_WRITE, 0, NULL, OPEN_ALWAYS, FILE_FLAG_WRITE_THROUGH, NULL);
+	if (!hFile) return (-1);
+	else
+	{
+		GetFileSize(hFile, &Sz);
+		SetFilePointer(hFile, 0, NULL, FILE_END);
+		sprintf(buf, "%s\r\n", text);
+		WriteFile(hFile, buf, strlen(buf), &res, NULL);
+		CloseHandle(hFile);
+		return (int)res;
+	}
+}
+// -----------------------------------------------------
+// Функция main
+// Точка входа процесса
+// -----------------------------------------------------
+void main(int agrc, char *argv[])
+{
+	char buffer[256];
+	// Таблица точек входа
+	SERVICE_TABLE_ENTRY DispatcherTable[] =
+	{
+		{
+			// Имя сервиса
+			MYServiceName,
+			// Функция main сервиса
+			(LPSERVICE_MAIN_FUNCTION)ServiceMain
+		},
+		{
+			NULL,
+			NULL
+		}
+	};
+	SvcReportEvent("Sample service entry point");
+	// Запуск диспетчера
+	if (!StartServiceCtrlDispatcher(DispatcherTable))
+	{
+		sprintf(buffer,	"StartServiceCtrlDispatcher: Error %ld\n",GetLastError());
+		SvcReportEvent(buffer);
+		return;
+	}
+}
+// -----------------------------------------------------
+// Функция ServiceMain
+// Точка входа сервиса 
+// -----------------------------------------------------
+void WINAPI ServiceMain(DWORD argc, LPSTR *argv)
+{
+	char buf[256];
+	int res=0;
+	// Регистрируем управляющую функцию сервиса
+	ssHandle = RegisterServiceCtrlHandler(MYServiceName, ServiceControl);
+	if (!ssHandle)
+	{
+		SvcReportEvent("Error RegisterServiceCtrlHandler");
+	 return;
+	}
+	// Устанавливаем состояние сервиса
+	// Сервис работает как отдельный процесс
+	ss.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
+	// Код ошибки при инициализации и завершения сервиса не используется
+	ss.dwServiceSpecificExitCode = 0;
+	// Начинаем запуск сервиса.
+	// Прежде всего устанавливаем состояние ожидания запуска сервиса
+	ReportStatus(SERVICE_START_PENDING, NO_ERROR, 30000);
+	SvcReportEvent("Service starting...");
+	// Вызываем функцию, которая выполняет все необходимые инициализирующие действия
+	res=ServiceStart();
+	if (res < 0)
+	{
+		sprintf(buf, "Error init server %d", res);
+		SvcReportEvent(buf);
+		ServiceControl(SERVICE_CONTROL_STOP);
+		return;
+	}
+	// После завершения инициализации устанавливаем состояние работающего сервиса
+	ReportStatus(SERVICE_RUNNING, NOERROR, 0);
+	SvcReportEvent("Service started!");
+	// основное тело службы
+	if (Server() > 0)
+	{
+		SvcReportEvent("Server MF started!");
+	}
+	else
+	{
+		sprintf(buf, "Error starting server %d", res);
+		SvcReportEvent(buf);
+		ServiceControl(SERVICE_CONTROL_STOP);
+	}
+	return;
+}
+// -----------------------------------------------------
+// Функция ServiceControl
+// Точка входа функции обработки команд
+// -----------------------------------------------------
+void WINAPI ServiceControl(DWORD dwControlCode)
+{
+	// Анализируем код команды и выполняем эту команду
+	switch (dwControlCode)
+	{
+		// Команда остановки сервиса
+	case SERVICE_CONTROL_STOP:
+	{
+		// Устанавливаем состояние ожидания остановки
+		ss.dwCurrentState = SERVICE_STOP_PENDING;
+		ReportStatus(ss.dwCurrentState, NOERROR, 0);
+		SvcReportEvent("Service stopping...");
+		// Выполняем остановку сервиса, вызывая функцию, которая выполняет все необходимые для этого действия
+		ServiceStop();
+		// Отмечаем состояние как остановленный сервис
+		ReportStatus(SERVICE_STOPPED, NOERROR, 0);
+		SvcReportEvent("Service stopped!");
+		break;
+	}
+	// Определение текущего состояния сервиса
+	case SERVICE_CONTROL_INTERROGATE:
+	{
+		// Возвращаем текущее состояние сервиса
+		ReportStatus(ss.dwCurrentState, NOERROR, 0);
+		break;
+	}
+	// В ответ на другие команды просто возвращаем текущее состояние сервиса
+	default:
+	{
+		ReportStatus(ss.dwCurrentState, NOERROR, 0);
+		break;
+	}
+	}
+}
+// -----------------------------------------------------
+// Функция ReportStatus
+// Посылка состояния сервиса системе управления сервисами
+// -----------------------------------------------------
+void ReportStatus(DWORD dwCurrentState,
+	DWORD dwWin32ExitCode, DWORD dwWaitHint)
+{
+	// Счетчик шагов длительных операций
+	static DWORD dwCheckPoint = 1;
+	// Если сервис не находится в процессе запуска, его можно остановить
+	if (dwCurrentState == SERVICE_START_PENDING)
+		ss.dwControlsAccepted = 0;
+	else
+		ss.dwControlsAccepted = SERVICE_ACCEPT_STOP;
+	// Сохраняем состояние, переданное через параметры функции
+	ss.dwCurrentState = dwCurrentState;
+	ss.dwWin32ExitCode = dwWin32ExitCode;
+	ss.dwWaitHint = dwWaitHint;
+	// Если сервис не работает и не остановлен, увеличиваем значение счетчика шагов длительных операций
+	if ((dwCurrentState == SERVICE_RUNNING) ||
+		(dwCurrentState == SERVICE_STOPPED))
+		ss.dwCheckPoint = 0;
+	else
+		ss.dwCheckPoint = dwCheckPoint++;
+	// Вызываем функцию установки состояния
+	SetServiceStatus(ssHandle, &ss);
 }
 
-/* Функция установки сервиса в базу SCM */
-void SvcInstall() {
-    SC_HANDLE schSCManager;
-    SC_HANDLE schService;
-    TCHAR szPath[MAX_PATH];
-
-    /* Получаем путь к исполняемому файлу текущего процесса */
-    if (!GetModuleFileName(NULL, szPath, MAX_PATH)) {
-        printf("Cannot install service (%ld)\n", GetLastError());
-        return;
-    }
-    /* Получаем дескриптор в базу SCM */
-    schSCManager = OpenSCManager(
-        NULL, // NULL указывает на то, что это локальная машина
-        NULL, // Здесть должен быть еще массив, но он нам не нужен
-        SC_MANAGER_ALL_ACCESS); // Для получения полных прав доступа
-
-    /* Проверяем успешность прошлой функции */
-    if (NULL == schSCManager) {
-        printf("OpenSCManager failed (%ld)\n", GetLastError());
-        return;
-    }
-
-    /* Создаем сервис  */
-    schService = CreateService(schSCManager, // SCM база
-                               SVCNAME,      // Имя сервиса
-                               SVCNAME, // Имя сервиса для отображения
-                               SERVICE_ALL_ACCESS, // Желаемый доступ
-                               SERVICE_WIN32_OWN_PROCESS, // Тип сервиса
-                               SERVICE_DEMAND_START, // Тип запуска
-                               SERVICE_ERROR_NORMAL, // Тип контроля ошибок
-                               szPath, // Путь к исполняемому файлу сервиса
-                               NULL, NULL, NULL, NULL, NULL);
-
-    /* Проверяем успешность создания сервиса */
-    if (schService == NULL) {
-        printf("CreateService failed (%ld)\n", GetLastError());
-        CloseServiceHandle(schSCManager);
-        return;
-    } else {
-        printf("Service installed successfully\n");
-    }
-
-    CloseServiceHandle(schService);
-    CloseServiceHandle(schSCManager);
-}
-
-/* Код сервиса */
-void WINAPI SvcMain(DWORD dwArgc, LPSTR *lpszArgv) {
-    char buf[256];
-
-    gSvcStatusHandle = RegisterServiceCtrlHandler(SVCNAME, SvcCtrlHandler);
-    if (!gSvcStatusHandle) {
-        SvcReportEvent("Error registering\n");
-        return;
-    }
-
-    gSvcStatus.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
-    gSvcStatus.dwServiceSpecificExitCode = 0;
-
-    ReportSvcStatus(SERVICE_START_PENDING, NO_ERROR, 6000);
-    SvcReportEvent("Starting service\n");
-
-    // Отправляем сигнал о том, что сервер запущен
-    int res = ServiceStart(dwArgc, lpszArgv);
-    if (res) {
-        sprintf(buf, "Error init server %d", res);
-        SvcReportEvent(buf);
-        SvcCtrlHandler(SERVICE_CONTROL_STOP);
-        return;
-    }
-
-    ReportSvcStatus(SERVICE_RUNNING, NO_ERROR, 0);
-    SvcReportEvent("Service init\n");
-
-
-    if (!Server()) {
-        SvcReportEvent("Error staring server\n");
-        ReportSvcStatus(SERVICE_STOPPED, NO_ERROR, 0);
-        SvcCtrlHandler(SERVICE_CONTROL_STOP);
-        return;
-    }
-    return;
-}
-
-/* Установка текущего состояния сервиса и и отчет о нем SCM */
-VOID ReportSvcStatus(DWORD dwCurrentState, DWORD dwWin32ExitCode,
-                     DWORD dwWaitHint) {
-
-    static DWORD dwCheckPoint = 1;
-
-    /* Заполняем поля структуры SERVICE_STATUS */
-    if (dwCurrentState == SERVICE_START_PENDING) {
-        gSvcStatus.dwControlsAccepted = 0;
-    } else {
-        gSvcStatus.dwControlsAccepted = SERVICE_ACCEPT_STOP;
-    }
-
-    gSvcStatus.dwCurrentState = dwCurrentState;
-    gSvcStatus.dwWin32ExitCode = dwWin32ExitCode;
-    gSvcStatus.dwWaitHint = dwWaitHint;
-
-    if ((dwCurrentState == SERVICE_RUNNING) ||
-        (dwCurrentState == SERVICE_STOPPED)) {
-        gSvcStatus.dwCheckPoint = 0;
-    } else {
-        gSvcStatus.dwCheckPoint = dwCheckPoint++;
-    }
-
-    // Рапортуем SCM текущий статус.
-    SetServiceStatus(gSvcStatusHandle, &gSvcStatus);
-}
-
-/* Эта функция вызывается SCM, когда она получает (что-то?) отправленно сервису
- * при помощи функции ControlService функцию */
-void WINAPI SvcCtrlHandler(DWORD dwCtrl) {
-
-    // Обрабатываем полученный код
-    switch (dwCtrl) {
-    case SERVICE_CONTROL_STOP:
-
-        gSvcStatus.dwCurrentState = SERVICE_STOP_PENDING;
-        SvcReportEvent("Service stopping...");
-        ReportSvcStatus(SERVICE_STOP_PENDING, NO_ERROR, 0);
-
-        ServiceStop();
-        // Сигнализируем сервису остановиться
-        ReportSvcStatus(SERVICE_STOPPED, NO_ERROR, 0);
-
-        break;
-    case SERVICE_CONTROL_INTERROGATE:
-        ReportSvcStatus(gSvcStatus.dwCurrentState, NO_ERROR, 0);
-        break;
-
-    default:
-        ReportSvcStatus(gSvcStatus.dwCurrentState, NO_ERROR, 0);
-        break;
-    }
-}
-
-/* Функция сохранения сообщейний в лог */
-void SvcReportEvent(char *text) {
-
-    DWORD res, Sz;
-    HANDLE hFile;
-    char buf[256];
-
-    hFile = CreateFile("C:\\logfile.log", GENERIC_WRITE, 0, NULL, OPEN_ALWAYS,
-                       FILE_FLAG_WRITE_THROUGH, NULL);
-    if (!hFile) {
-        return;
-    } else {
-        GetFileSize(hFile, &Sz);
-        SetFilePointer(hFile, 0, NULL, FILE_END);
-        sprintf(buf, "%s\r\n", text);
-        WriteFile(hFile, buf, strlen(buf), &res, NULL);
-        CloseHandle(hFile);
-        return;
-    }
-}

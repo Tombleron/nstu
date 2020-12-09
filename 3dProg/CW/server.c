@@ -4,7 +4,7 @@
 #include <windows.h>
 
 #define BUF_SIZE 512
-extern void SvcReportEvent(char*);
+extern int SvcReportEvent(const char*);
 
 char DEFAULT_ADDR[15] = "127.0.0.1";
 int DEFAULT_PORT = 27015;
@@ -182,15 +182,7 @@ DWORD WINAPI clientProcessing(LPVOID data) {
     return 0;
 }
 
-int ServiceStart(int argc, char**argv) {
-
-    if (argc == 3) {
-      DEFAULT_PORT = atoi(argv[2]);
-      strcpy(DEFAULT_ADDR, argv[1]);
-    } else if (argc != 1) {
-      DisplayMessage(SERVER_ERROR, "Usage ./tcp_server.exe [address] [port]", 0, FALSE);
-      return -1;
-    }
+int ServiceStart() {
 
     char buff[1024];
     char message[BUF_SIZE];
