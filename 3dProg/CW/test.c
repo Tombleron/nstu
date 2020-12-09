@@ -90,6 +90,7 @@ void SvcInstall() {
 
 /* Код сервиса */
 void WINAPI SvcMain(DWORD dwArgc, LPSTR *lpszArgv) {
+
     ghSvcStopEvent = CreateEvent(NULL, // Стандартные аттрибуты безопасности
                                  TRUE, // Ручной сброс события
                                  FALSE, NULL);
@@ -129,6 +130,7 @@ VOID ReportSvcStatus(DWORD dwCurrentState, DWORD dwWin32ExitCode,
 
     if (dwCurrentState == SERVICE_START_PENDING) {
         gSvcStatus.dwControlsAccepted = 0;
+        gSvcStatusHandle = RegisterServiceCtrlHandler(SVCNAME, SvcCtrlHandler);
     } else {
         gSvcStatus.dwControlsAccepted = SERVICE_ACCEPT_STOP;
     }
