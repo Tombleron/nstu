@@ -1,3 +1,4 @@
+#include "server.c"
 #include <stdio.h>
 #include <string.h>
 #include <windows.h>
@@ -15,6 +16,10 @@ VOID WINAPI SvcMain(DWORD, LPTSTR *);
 VOID ReportSvcStatus(DWORD, DWORD, DWORD);
 VOID SvcInit(DWORD, LPTSTR *);
 VOID SvcReportEvent(LPTSTR);
+
+extern int Server();
+extern int ServiceStart(int, char **);
+extern void ServiceStop();
 
 /* Входная точка процесса */
 int main(int argc, char *argv[]) {
@@ -90,30 +95,30 @@ void SvcInstall() {
 
 /* Код сервиса */
 void WINAPI SvcMain(DWORD dwArgc, LPSTR *lpszArgv) {
+    char buf[256];
 
-    ghSvcStopEvent = CreateEvent(NULL, // Стандартные аттрибуты безопасности
-                                 TRUE, // Ручной сброс события
-                                 FALSE, NULL);
-
-    if (ghSvcStopEvent == NULL) {
-        ReportSvcStatus(SERVICE_STOPPED, NO_ERROR, 0);
-        return;
-    }
+    ReportSvcStatus(SERVICE_START_PENDING, NO_ERROR, 0);
 
     // Отправляем сигнал о том, что сервер запущен
 
+    int res = ServiceStart(dwArgc, lpszArgv);
+    if (res) {
+        sprintf(buf, "Error init server %d", res);
+        SvcReportEvent(buf);
+        SvcCtrlHandler(SERVICE_CONTROL_STOP);
+        return;
+    }
+
     ReportSvcStatus(SERVICE_RUNNING, NO_ERROR, 0);
+    SvcReportEvent("Service init\n");
 
     // TODO: Perform work until service stops.
 
-    while (1) {
-        // Ждем сигнала остановки сервиса
-
-        WaitForSingleObject(ghSvcStopEvent, INFINITE);
-
+    if (!Server()) {
         ReportSvcStatus(SERVICE_STOPPED, NO_ERROR, 0);
         return;
     }
+    return;
 }
 
 /* Установка текущего состояния сервиса и и отчет о нем SCM */
@@ -172,7 +177,7 @@ void WINAPI SvcCtrlHandler(DWORD dwCtrl) {
 }
 
 /* Функция сохранения сообщейний в лог */
-void SvcReportEvent(LPTSTR text) {
+void SvcReportEvent(char *text) {
 
     DWORD res, Sz;
     HANDLE hFile;

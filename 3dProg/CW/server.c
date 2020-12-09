@@ -4,9 +4,15 @@
 #include <windows.h>
 
 #define BUF_SIZE 512
+extern void SvcReportEvent(char*);
 
 char DEFAULT_ADDR[15] = "127.0.0.1";
 int DEFAULT_PORT = 27015;
+int running = TRUE;
+
+SOCKET serverSocket, clientSocket;
+struct sockaddr_in localAddr;
+struct sockaddr_in clientAddr;
 
 typedef struct MyData {
     char num[15];
@@ -25,23 +31,24 @@ int (*process_text)(char text[], char output[], int mod_count, int mod_max,
 
 void DisplayMessage(MessageType type, char *message, char* num,
                     BOOL GetResponse) {
+    char buf[BUF_SIZE];
     switch (type) {
     case SERVER:
-        printf("<SERVER> %s", message);
+        sprintf(buf, "<SERVER> %s", message);
         break;
     case SERVER_ERROR:
-        printf("<SERVER> %s", message);
+        sprintf(buf, "<SERVER> %s", message);
         break;
     case THREAD:
-        printf("<THREAD #%s> %s", num, message);
+        sprintf(buf, "<THREAD #%s> %s", num, message);
         break;
     case THREAD_ERROR:
-        printf("<THREAD №%s> %s", num, message);
+        sprintf(buf, "<THREAD №%s> %s", num, message);
         break;
     }
+    SvcReportEvent(buf);
     if (GetResponse) {
-        scanf("%s", message);
-        printf("%s", message);
+        printf("%s", buf);
     }
 }
 
@@ -175,7 +182,7 @@ DWORD WINAPI clientProcessing(LPVOID data) {
     return 0;
 }
 
-int main(int argc, char**argv) {
+int ServiceStart(int argc, char**argv) {
 
     if (argc == 3) {
       DEFAULT_PORT = atoi(argv[2]);
@@ -196,7 +203,6 @@ int main(int argc, char**argv) {
         return -1;
     }
 
-    SOCKET serverSocket;
     if ((serverSocket = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET) {
         sprintf(message, "Error while creating a socket [ERROR #%d].\n",
                WSAGetLastError());
@@ -205,7 +211,6 @@ int main(int argc, char**argv) {
         return -2;
     }
 
-    struct sockaddr_in localAddr;
     localAddr.sin_family = AF_INET; 
     localAddr.sin_port = htons(DEFAULT_PORT);
     localAddr.sin_addr.s_addr =
@@ -229,14 +234,16 @@ int main(int argc, char**argv) {
         WSACleanup();
         return -4;
     }
+}
 
-
-    struct sockaddr_in clientAddr;
+int Server() {
     int clientAddrSize = sizeof(clientAddr);
-    SOCKET clientSocket;
-
+    char message[BUF_SIZE];
     while ((clientSocket = accept(serverSocket, (struct sockaddr *)&clientAddr,
                                  &clientAddrSize))) {
+        if (running == FALSE) {
+            break;
+        }
         HOSTENT *hst;
         hst = gethostbyaddr((char *)&clientAddr.sin_addr.s_addr, 4, AF_INET);
         sprintf(message, "New connection established: \"%s\".\n",
@@ -249,4 +256,9 @@ int main(int argc, char**argv) {
         CreateThread(NULL, 0, clientProcessing, &data, 0, &thID);
     }
     return 0;
+}
+
+void ServiceStop() {
+    running = FALSE;
+    SvcReportEvent("Service stopped\n");
 }
