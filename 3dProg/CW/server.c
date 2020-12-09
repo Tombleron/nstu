@@ -6,7 +6,7 @@
 #define BUF_SIZE 512
 extern int SvcReportEvent(const char *);
 
-char DEFAULT_ADDR[15] = "127.0.0.1";
+char DEFAULT_ADDR[15] = "172.17.3.170";
 int DEFAULT_PORT = 27015;
 int running = TRUE;
 
