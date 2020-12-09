@@ -96,15 +96,20 @@ void SvcInstall() {
 /* Код сервиса */
 void WINAPI SvcMain(DWORD dwArgc, LPSTR *lpszArgv) {
     char buf[256];
-        gSvcStatusHandle = RegisterServiceCtrlHandler(SVCNAME, SvcCtrlHandler);
-        if (!gSvcStatusHandle) {
+
+    gSvcStatusHandle = RegisterServiceCtrlHandler(SVCNAME, SvcCtrlHandler);
+    if (!gSvcStatusHandle) {
         SvcReportEvent("Error registering\n");
         return;
-        }
-    ReportSvcStatus(SERVICE_START_PENDING, NO_ERROR, 0);
+    }
+
+    gSvcStatus.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
+    gSvcStatus.dwServiceSpecificExitCode = 0;
+
+    ReportSvcStatus(SERVICE_START_PENDING, NO_ERROR, 6000);
+    SvcReportEvent("Starting service\n");
 
     // Отправляем сигнал о том, что сервер запущен
-
     int res = ServiceStart(dwArgc, lpszArgv);
     if (res) {
         sprintf(buf, "Error init server %d", res);
@@ -116,10 +121,11 @@ void WINAPI SvcMain(DWORD dwArgc, LPSTR *lpszArgv) {
     ReportSvcStatus(SERVICE_RUNNING, NO_ERROR, 0);
     SvcReportEvent("Service init\n");
 
-    // TODO: Perform work until service stops.
 
     if (!Server()) {
+        SvcReportEvent("Error staring server\n");
         ReportSvcStatus(SERVICE_STOPPED, NO_ERROR, 0);
+        SvcCtrlHandler(SERVICE_CONTROL_STOP);
         return;
     }
     return;
@@ -131,19 +137,16 @@ VOID ReportSvcStatus(DWORD dwCurrentState, DWORD dwWin32ExitCode,
 
     static DWORD dwCheckPoint = 1;
 
-    // Заполняем поля структуры SERVICE_STATUS
-
-    gSvcStatus.dwCurrentState = dwCurrentState;
-    gSvcStatus.dwWin32ExitCode = dwWin32ExitCode;
-    gSvcStatus.dwWaitHint = dwWaitHint;
-
+    /* Заполняем поля структуры SERVICE_STATUS */
     if (dwCurrentState == SERVICE_START_PENDING) {
-      gSvcStatus.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
-      gSvcStatus.dwServiceSpecificExitCode = 0;
         gSvcStatus.dwControlsAccepted = 0;
     } else {
         gSvcStatus.dwControlsAccepted = SERVICE_ACCEPT_STOP;
     }
+
+    gSvcStatus.dwCurrentState = dwCurrentState;
+    gSvcStatus.dwWin32ExitCode = dwWin32ExitCode;
+    gSvcStatus.dwWaitHint = dwWaitHint;
 
     if ((dwCurrentState == SERVICE_RUNNING) ||
         (dwCurrentState == SERVICE_STOPPED)) {
@@ -161,16 +164,18 @@ VOID ReportSvcStatus(DWORD dwCurrentState, DWORD dwWin32ExitCode,
 void WINAPI SvcCtrlHandler(DWORD dwCtrl) {
 
     // Обрабатываем полученный код
-
     switch (dwCtrl) {
     case SERVICE_CONTROL_STOP:
+
+        gSvcStatus.dwCurrentState = SERVICE_STOP_PENDING;
+        SvcReportEvent("Service stopping...");
         ReportSvcStatus(SERVICE_STOP_PENDING, NO_ERROR, 0);
 
+        ServiceStop();
         // Сигнализируем сервису остановиться
-        SetEvent(ghSvcStopEvent);
-        ReportSvcStatus(gSvcStatus.dwCurrentState, NO_ERROR, 0);
+        ReportSvcStatus(SERVICE_STOPPED, NO_ERROR, 0);
 
-        return;
+        break;
     case SERVICE_CONTROL_INTERROGATE:
         ReportSvcStatus(gSvcStatus.dwCurrentState, NO_ERROR, 0);
         break;
