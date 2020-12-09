@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <string.h>
-#include <winsock2.h>
 #include <windows.h>
+#include <winsock2.h>
 
 #define BUF_SIZE 512
-extern int SvcReportEvent(const char*);
+extern int SvcReportEvent(const char *);
 
 char DEFAULT_ADDR[15] = "127.0.0.1";
 int DEFAULT_PORT = 27015;
@@ -29,7 +29,7 @@ typedef enum MessageType {
 int (*process_text)(char text[], char output[], int mod_count, int mod_max,
                     int buf_size);
 
-void DisplayMessage(MessageType type, char *message, char* num,
+void DisplayMessage(MessageType type, char *message, char *num,
                     BOOL GetResponse) {
     char buf[BUF_SIZE];
     switch (type) {
@@ -52,15 +52,18 @@ void DisplayMessage(MessageType type, char *message, char* num,
     }
 }
 
-void generate_filenames(char name[], char out[]) { strcat(out, name); }
+void generate_filenames(char name[], char out[]) {
+    strcpy(out, name);
+    strcat(out, "_out");
+}
 
-int ProcessResponse(char *inName, int rCount, char* num, SOCKET funcSocket) {
+int ProcessResponse(char *inName, int rCount, char *num, SOCKET funcSocket) {
 
     HANDLE hIn, hOut, hLib;
     DWORD dIn, dOut;
 
     char buf[BUF_SIZE], outbuf[BUF_SIZE];
-    char outName[BUF_SIZE] = "out_";
+    char outName[BUF_SIZE];
     char message[BUF_SIZE];
     generate_filenames(inName, outName);
 
@@ -84,7 +87,7 @@ int ProcessResponse(char *inName, int rCount, char* num, SOCKET funcSocket) {
     }
 
     DisplayMessage(THREAD, "Trying to load library\n", num, FALSE);
-    hLib = LoadLibrary("dlltest.dll");
+    hLib = LoadLibrary("C:/dlltest.dll");
     if (hLib == NULL) {
         sprintf(message, "Unable to load library\n");
         DisplayMessage(THREAD_ERROR, message, num, FALSE);
@@ -186,32 +189,32 @@ int ServiceStart() {
 
     char buff[1024];
     char message[BUF_SIZE];
-    DisplayMessage(SERVER, "Starting server\n", 0,  FALSE);
+    DisplayMessage(SERVER, "Starting server\n", 0, FALSE);
 
     if (WSAStartup(0x0202, (WSADATA *)&buff[0])) {
         sprintf(message, "Error with WSAStartup [ERROR #%d].\n",
-               WSAGetLastError());
+                WSAGetLastError());
         DisplayMessage(SERVER_ERROR, message, 0, FALSE);
         return -1;
     }
 
     if ((serverSocket = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET) {
         sprintf(message, "Error while creating a socket [ERROR #%d].\n",
-               WSAGetLastError());
+                WSAGetLastError());
         DisplayMessage(SERVER_ERROR, message, 0, FALSE);
         WSACleanup();
         return -2;
     }
 
-    localAddr.sin_family = AF_INET; 
+    localAddr.sin_family = AF_INET;
     localAddr.sin_port = htons(DEFAULT_PORT);
-    localAddr.sin_addr.s_addr =
-        inet_addr(DEFAULT_ADDR);
+    localAddr.sin_addr.s_addr = inet_addr(DEFAULT_ADDR);
 
     if (bind(serverSocket, (struct sockaddr *)&localAddr, sizeof(localAddr))) {
-        sprintf(message, "Error while binding the socket and address "
-               "[ERROR #%d].\n",
-               WSAGetLastError());
+        sprintf(message,
+                "Error while binding the socket and address "
+                "[ERROR #%d].\n",
+                WSAGetLastError());
         DisplayMessage(SERVER_ERROR, message, 0, FALSE);
         closesocket(serverSocket);
         WSACleanup();
@@ -220,7 +223,7 @@ int ServiceStart() {
 
     if (listen(serverSocket, 0x100)) {
         sprintf(message, "Error with listening to the socket [ERROR #%d]\n",
-               WSAGetLastError());
+                WSAGetLastError());
         DisplayMessage(SERVER_ERROR, message, 0, FALSE);
         closesocket(serverSocket);
         WSACleanup();
@@ -232,14 +235,14 @@ int Server() {
     int clientAddrSize = sizeof(clientAddr);
     char message[BUF_SIZE];
     while ((clientSocket = accept(serverSocket, (struct sockaddr *)&clientAddr,
-                                 &clientAddrSize))) {
+                                  &clientAddrSize))) {
         if (running == FALSE) {
             break;
         }
         HOSTENT *hst;
         hst = gethostbyaddr((char *)&clientAddr.sin_addr.s_addr, 4, AF_INET);
         sprintf(message, "New connection established: \"%s\".\n",
-               (hst) ? hst->h_name : "");
+                (hst) ? hst->h_name : "");
         DWORD thID;
         MYDATA data;
         strcpy(data.num, (hst) ? hst->h_name : "");
