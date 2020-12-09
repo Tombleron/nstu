@@ -96,7 +96,11 @@ void SvcInstall() {
 /* Код сервиса */
 void WINAPI SvcMain(DWORD dwArgc, LPSTR *lpszArgv) {
     char buf[256];
-
+        gSvcStatusHandle = RegisterServiceCtrlHandler(SVCNAME, SvcCtrlHandler);
+        if (!gSvcStatusHandle) {
+        SvcReportEvent("Error registering\n");
+        return;
+        }
     ReportSvcStatus(SERVICE_START_PENDING, NO_ERROR, 0);
 
     // Отправляем сигнал о том, что сервер запущен
@@ -134,8 +138,9 @@ VOID ReportSvcStatus(DWORD dwCurrentState, DWORD dwWin32ExitCode,
     gSvcStatus.dwWaitHint = dwWaitHint;
 
     if (dwCurrentState == SERVICE_START_PENDING) {
+      gSvcStatus.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
+      gSvcStatus.dwServiceSpecificExitCode = 0;
         gSvcStatus.dwControlsAccepted = 0;
-        gSvcStatusHandle = RegisterServiceCtrlHandler(SVCNAME, SvcCtrlHandler);
     } else {
         gSvcStatus.dwControlsAccepted = SERVICE_ACCEPT_STOP;
     }
