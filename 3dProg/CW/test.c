@@ -160,9 +160,11 @@ void WINAPI SvcCtrlHandler(DWORD dwCtrl) {
 
         return;
     case SERVICE_CONTROL_INTERROGATE:
+        ReportSvcStatus(gSvcStatus.dwCurrentState, NO_ERROR, 0);
         break;
 
     default:
+        ReportSvcStatus(gSvcStatus.dwCurrentState, NO_ERROR, 0);
         break;
     }
 }
