@@ -154,8 +154,13 @@ int main() {
 
         printf("<SERVER>: Got command <<%s>>\n", (LPSTR)lpFileMap);
 
-        sprintf(response, "\n***<SERVER> Finnished with %d changes***\n",
-                ProcessResponse(lpFileMap));
+        int res = ProcessResponse(lpFileMap);
+        if (res >= 0) {
+            sprintf(response, "\n***<SERVER> Finnished with %d changes***\n",
+                    ProcessResponse(lpFileMap));
+        } else {
+          sprintf(response, "\n***<SERVER> Error processing file error %ld\n", GetLastError());
+        }
 
         strcpy((char *)lpFileMap, response);
 
