@@ -64,7 +64,7 @@ int Server() {
     return 0;
 }
 
-void SericeStop() {
+void ServiceStop() {
     running = FALSE;
     CloseHandle(hPipe);
 }
