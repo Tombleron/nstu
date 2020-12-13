@@ -157,7 +157,7 @@ int main() {
         int res = ProcessResponse(lpFileMap);
         if (res >= 0) {
             sprintf(response, "\n***<SERVER> Finnished with %d changes***\n",
-                    ProcessResponse(lpFileMap));
+                    res);
         } else {
           sprintf(response, "\n***<SERVER> Error processing file error %ld\n", GetLastError());
         }
