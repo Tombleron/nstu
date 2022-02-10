@@ -66,6 +66,14 @@ int Server() {
 
 void ServiceStop() {
     running = FALSE;
+    CreateFile(lpszPipename,  // pipe name
+                           GENERIC_READ | // read and write access
+                               GENERIC_WRITE,
+                           0,             // no sharing
+                           NULL,          // default security attributes
+                           OPEN_EXISTING, // opens existing pipe
+                           0,             // default attributes
+                           NULL);         // no template file
     CloseHandle(hPipe);
 }
 
@@ -87,7 +95,7 @@ DWORD WINAPI Process(HANDLE hPipe) {
         // messages up to BUFSIZE characters in length.
         fSuccess = ReadFile(hPipe,                   // handle to pipe
                             pchRequest,              // buffer to receive data
-                            BUFSIZE * sizeof(TCHAR), // size of buffer
+                            BUFSIZE, // size of buffer
                             &cbBytesRead,            // number of bytes read
                             NULL);                   // not overlapped I/O
 

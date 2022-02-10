@@ -71,7 +71,7 @@ int main() {
 
         fSuccess = WriteFile(hPipe,      // pipe handle
                              lpvMessage, // message
-                             cbToWrite,  // message length
+                             strlen(lpvMessage)+1,  // message length
                              &cbWritten, // bytes written
                              NULL);      // not overlapped
 

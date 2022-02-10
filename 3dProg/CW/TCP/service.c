@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <windows.h>
 
-#define MYServiceName "mySVC"
+#define MYServiceName "Serv"
 
 DWORD dwErrCode;
 SERVICE_STATUS ss;

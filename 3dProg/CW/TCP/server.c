@@ -1,12 +1,12 @@
 #include <stdio.h>
 #include <string.h>
-#include <windows.h>
 #include <winsock2.h>
+#include <windows.h>
 
 #define BUF_SIZE 512
 extern int SvcReportEvent(const char *);
 
-char DEFAULT_ADDR[15] = "172.17.3.170";
+char DEFAULT_ADDR[15] = "127.0.0.1";
 int DEFAULT_PORT = 27015;
 int running = TRUE;
 
@@ -255,5 +255,7 @@ int Server() {
 
 void ServiceStop() {
     running = FALSE;
+    closesocket(serverSocket);
+    WSACleanup();
     SvcReportEvent("Service stopped\n");
 }
