@@ -1,0 +1,20 @@
+[package]
+name = "parall"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name = "server"
+src = "src/bin/server/"
+
+[[bin]]
+name = "worker"
+src = "src/bin/worker/"
+
+
+[dependencies]
+zmq = "0.9.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"

@@ -2,7 +2,7 @@
 *.txt
 *.dxd
 .clang-format
-*/target 
+**/target
 *.png
 
 # Prerequisites
