@@ -1,7 +1,7 @@
 use std::alloc::{self, Layout};
 use std::marker::PhantomData;
 use std::mem;
-use std::ops::{Index, IndexMut, DerefMut, Deref};
+use std::ops::{Deref, DerefMut, Index, IndexMut};
 use std::ptr::{self, NonNull};
 
 pub struct MyVec<T> {
@@ -104,10 +104,15 @@ impl<T> MyVec<T> {
         self.len
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+
     pub fn capacity(&self) -> usize {
         self.cap
     }
 
+    #[allow(clippy::should_implement_trait)]
     pub fn into_iter(self) -> MyIter<T> {
         let ptr = self.ptr;
         let cap = self.cap;
@@ -131,6 +136,12 @@ impl<T> MyVec<T> {
     }
 }
 
+impl<T> Default for MyVec<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T> Index<usize> for MyVec<T> {
     type Output = T;
 
@@ -147,7 +158,6 @@ impl<T> Index<usize> for MyVec<T> {
 }
 
 impl<T> IndexMut<usize> for MyVec<T> {
-
     fn index_mut(&mut self, index: usize) -> &mut T {
         assert!(
             index < self.len,
@@ -163,24 +173,20 @@ impl<T> IndexMut<usize> for MyVec<T> {
 impl<T> Deref for MyVec<T> {
     type Target = [T];
     fn deref(&self) -> &[T] {
-        unsafe {
-            std::slice::from_raw_parts(self.ptr.as_ptr(), self.len)
-        }
+        unsafe { std::slice::from_raw_parts(self.ptr.as_ptr(), self.len) }
     }
 }
 
 impl<T> DerefMut for MyVec<T> {
     fn deref_mut(&mut self) -> &mut [T] {
-        unsafe {
-            std::slice::from_raw_parts_mut(self.ptr.as_ptr(), self.len)
-        }
+        unsafe { std::slice::from_raw_parts_mut(self.ptr.as_ptr(), self.len) }
     }
 }
 
 impl<T> Drop for MyVec<T> {
     fn drop(&mut self) {
         if self.cap != 0 {
-            while let Some(_) = self.pop() {}
+            while self.pop().is_some() {}
             let layout = Layout::array::<T>(self.cap).unwrap();
             unsafe {
                 alloc::dealloc(self.ptr.as_ptr() as *mut u8, layout);
@@ -226,12 +232,10 @@ mod tests {
 
     #[test]
     fn init() {
-
         let my_vec: MyVec<i64> = MyVec::new();
 
         assert_eq!(my_vec.len(), 0);
         assert_eq!(my_vec.capacity(), 0);
-
     }
 
     #[test]
@@ -250,9 +254,8 @@ mod tests {
         my_vec.push(2);
         my_vec.push(3);
 
-        assert_eq!(my_vec.len(),  3);
-        assert_eq!(my_vec.capacity(),  4);
-
+        assert_eq!(my_vec.len(), 3);
+        assert_eq!(my_vec.capacity(), 4);
     }
 
     #[test]
@@ -269,7 +272,7 @@ mod tests {
         assert_eq!(my_vec.pop(), Some(3));
         assert_eq!(my_vec.len(), 2);
         assert_eq!(my_vec.capacity(), 4);
-        
+
         assert_eq!(my_vec.pop(), Some(2));
         assert_eq!(my_vec.len(), 1);
         assert_eq!(my_vec.capacity(), 4);
@@ -298,7 +301,7 @@ mod tests {
         my_vec.push(1);
         my_vec.push(2);
         my_vec.push(3);
-        
+
         assert_eq!(my_vec[0], 1);
         assert_eq!(my_vec[1], 2);
         assert_eq!(my_vec[2], 3);
@@ -310,7 +313,7 @@ mod tests {
         let mut my_vec: MyVec<i64> = MyVec::new();
 
         my_vec.push(1);
-        
+
         my_vec[1];
     }
 
@@ -319,7 +322,7 @@ mod tests {
         let mut my_vec: MyVec<i64> = MyVec::new();
 
         my_vec.push(1);
-        
+
         assert_eq!(my_vec[0], 1);
 
         my_vec[0] = 2;
