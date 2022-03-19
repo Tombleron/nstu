@@ -1,42 +1,79 @@
-use parall::utils::{State, Work};
-use std::env;
-use std::thread;
+use parall::utils::*;
+use rand::random;
+use std::{env, thread};
+use tracing::{info, Level};
+use tracing_subscriber::FmtSubscriber;
+use zmq::Socket;
 
-fn worker() {
-    let ctx = zmq::Context::new();
+struct Worker {
+    req_socket: Socket,
+    sub_socket: Socket,
+}
 
-    let socket = ctx.socket(zmq::REQ).expect("Unable to create socket.");
+impl Worker {
+    fn new() -> Self {
+        let ctx = zmq::Context::new();
 
-    socket
-        .connect("tcp://127.0.0.1:5557")
-        .expect("Unable to connect to validator socket.");
+        let req_socket = ctx.socket(zmq::REQ).expect("Unable to create req socket.");
+        let sub_socket = ctx.socket(zmq::SUB).expect("Unable to create sub socket.");
 
-    let mut msg = zmq::Message::new();
+        Self {
+            req_socket,
+            sub_socket,
+        }
+    }
 
-    loop {
-        socket
-            .send(&serde_json::to_string(&State::Availabe).unwrap(), 0)
-            .expect("Unable to send message.");
+    fn run(&mut self) {
+        self.req_socket
+            .connect("tcp://127.0.0.1:5557")
+            .expect("Unable to connect to validator socket.");
 
-        socket
-            .recv(&mut msg, 0)
-            .expect("Unable to retrive message.");
+        self.sub_socket
+            .connect("tcp://127.0.0.1:5555")
+            .expect("Unable to connect to pub socket.");
 
-        let result: Work = serde_json::from_str(msg.as_str().unwrap()).unwrap();
+        let mut msg = zmq::Message::new();
 
-        println!("Got work: {:?}", result);
+        loop {
+            self.req_socket
+                .send(&serde_json::to_string(&WorkerPacket::Available).unwrap(), 0)
+                .expect("Unable to send message.");
 
-        match result {
-            Work::Thanks => {}
-            Work::Empty => {}
-            Work::Work((p, q)) => {
-                socket
-                    .send(&serde_json::to_string(&State::Ready(p + q)).unwrap(), 0)
-                    .expect("Unable to send message.");
-                socket
-                    .recv(&mut msg, 0)
-                    .expect("Unable to retrive message.");
+            self.req_socket
+                .recv(&mut msg, 0)
+                .expect("Unable to retrive message.");
+
+            let result: ServerPacket = serde_json::from_str(msg.as_str().unwrap()).unwrap();
+            info!("Got message from the server: {:?}", result);
+
+            match result {
+                ServerPacket::Thanks => {}
+                ServerPacket::Empty => {}
+                ServerPacket::Work(mut work) => {
+                    info!("Got work: {:?}", work);
+                    self.process_packet(&mut work);
+                    info!("Nonce found!");
+                    self.req_socket
+                        .send(
+                            &serde_json::to_string(&WorkerPacket::Ready(work)).unwrap(),
+                            0,
+                        )
+                        .expect("Unable to send message.");
+                    self.req_socket
+                        .recv(&mut msg, 0)
+                        .expect("Unable to retrive message.");
+                }
             }
+        }
+    }
+
+    fn process_packet(&self, work: &mut Work) {
+        work.block().set_nonce(random());
+
+        // let mut msg = zmq::Message::new();
+        while !work.block().check_hash() {
+            // let response  = self.sub_socket.recv(&mut msg, 0);
+            work.block().inc_nonce();
         }
     }
 }
@@ -45,10 +82,18 @@ fn main() {
     if env::args().len() < 2 {
         println!("Usage: {} <workers_count>", env::args().last().unwrap());
     } else {
+        let subscriber = FmtSubscriber::builder()
+            .with_max_level(Level::TRACE)
+            .with_thread_ids(true)
+            .finish();
+
+        tracing::subscriber::set_global_default(subscriber)
+            .expect("setting default subscriber failed");
         let mut handlers = Vec::new();
         let count = env::args().last().unwrap().parse::<usize>().unwrap();
-        for _ in 0..count {
-            handlers.push(thread::spawn(worker));
+        for i in 0..count {
+            info!("Spawning worker with id: {i}");
+            handlers.push(thread::spawn(move || Worker::new().run()));
         }
 
         for handler in handlers {
