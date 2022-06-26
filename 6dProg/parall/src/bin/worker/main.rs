@@ -52,7 +52,6 @@ impl Worker {
                 ServerPacket::Work(mut work) => {
                     info!("Got work: {:?}", work);
                     self.process_packet(&mut work);
-                    info!("Nonce found!");
                     self.req_socket
                         .send(
                             &serde_json::to_string(&WorkerPacket::Ready(work)).unwrap(),
@@ -68,13 +67,13 @@ impl Worker {
     }
 
     fn process_packet(&self, work: &mut Work) {
-        work.block().set_nonce(random());
+        work.block_mut().set_nonce(random());
 
-        // let mut msg = zmq::Message::new();
-        while !work.block().check_hash() {
-            // let response  = self.sub_socket.recv(&mut msg, 0);
-            work.block().inc_nonce();
+        while !work.block_mut().check_hash() {
+            work.block_mut().inc_nonce();
         }
+
+        info!("Nonce found!");
     }
 }
 
