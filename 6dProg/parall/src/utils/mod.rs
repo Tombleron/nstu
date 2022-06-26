@@ -60,13 +60,7 @@ impl Block {
     }
 
     pub fn check_hash(&self) -> bool {
-        for &i in self.hash().iter().take(self.difficulty) {
-            if i != 0 {
-                return false;
-            }
-        }
-
-        true
+        self.hash().iter().take(self.difficulty).all(|&x| x == 0)
     }
     
     pub fn set_nonce(&mut self, nonce: usize) {
@@ -80,35 +74,39 @@ impl Block {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Work {
-    work_id: usize,
+    id: usize,
     block: Block,
 }
 
 impl Work {
-    pub fn id(&self) -> usize {
-        self.work_id
-    }
-
-    pub fn block(&mut self) -> &mut Block {
-        &mut self.block
-    }
-
     pub fn new() -> Self {
         Self {
-            work_id: 0,
+            id: 0,
             block: Block::new(),
         }
     }
 
+    pub fn id(&self) -> usize {
+        self.id
+    }
+
+    pub fn block(&self) -> &Block {
+        &self.block
+    }
+
+    pub fn block_mut(&mut self) -> &mut Block {
+        &mut self.block
+    }
+
     pub fn next(&self) -> Self {
         Self {
-            work_id: self.work_id + 1,
-            block: Block::new_with_id(self.work_id + 1),
+            id: self.id() + 1,
+            block: Block::new_with_id(self.id() + 1),
         }
     }
 
     pub fn validate(&self, current: &Work) -> bool {
-        if self.block == current.block && self.work_id == current.work_id {
+        if self.block == current.block && self.id() == current.id() {
             self.block.check_hash()
         } else {
             false

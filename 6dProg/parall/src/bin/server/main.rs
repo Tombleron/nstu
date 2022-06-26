@@ -43,42 +43,53 @@ impl Server {
             match result {
                 WorkerPacket::Available => {
                     info!("Worker requested a job.");
-                    let packet = ServerPacket::Work(self.current_work.clone());
-
-                    info!("Sending work: {:?}", packet);
-                    let work = serde_json::to_string(&packet).unwrap();
-
-                    self.rep_socket
-                        .send(&work, 0)
-                        .expect("Unable to send message.")
+                    self.send_job();
                 }
                 WorkerPacket::Ready(work) => {
                     info!("Worker sent result of the job: {:?}", work);
                     match work.validate(&self.current_work) {
                         true => {
                             info!("Work has been validated.");
-                            self.pub_socket
-                                .send(
-                                    &serde_json::to_string(&WorkDone(self.current_work.id()))
-                                        .unwrap(),
-                                    0,
-                                )
-                                .expect("Unable to send message.");
-                            self.rep_socket
-                                .send(&serde_json::to_string(&ServerPacket::Thanks).unwrap(), 0)
-                                .expect("Unable to send message.");
-                            self.generate_next();
+                            self.send_thanks();
                         }
                         false => {
                             info!("Work hasn't been validated.");
-                            self.rep_socket
-                                .send(&serde_json::to_string(&ServerPacket::Empty).unwrap(), 0)
-                                .expect("Unable to send message.");
+                            self.send_empty();
                         }
                     }
                 }
             }
         }
+    }
+
+    fn send_empty(&self) {
+        self.rep_socket
+            .send(&serde_json::to_string(&ServerPacket::Empty).unwrap(), 0)
+            .expect("Unable to send message.");
+    }
+
+    fn send_thanks(&mut self) {
+        self.pub_socket
+            .send(
+                &serde_json::to_string(&WorkDone(self.current_work.id())).unwrap(),
+                0,
+            )
+            .expect("Unable to send message.");
+        self.rep_socket
+            .send(&serde_json::to_string(&ServerPacket::Thanks).unwrap(), 0)
+            .expect("Unable to send message.");
+        self.generate_next();
+    }
+
+    fn send_job(&self) {
+        let packet = ServerPacket::Work(self.current_work.clone());
+
+        info!("Sending work: {:?}", packet);
+        let work = serde_json::to_string(&packet).unwrap();
+
+        self.rep_socket
+            .send(&work, 0)
+            .expect("Unable to send message.")
     }
 
     fn generate_next(&mut self) {
