@@ -4,20 +4,8 @@
 #include "stdlib.h"
 #include "string.h"
 #include "unistd.h"
-
-#ifdef DEBUG
-#define DBG(a, ...)                                                            \
-  { printf(a "\n", ##__VA_ARGS__); }
-#else
-#define DBG(a, ...)                                                            \
-  {}
-#endif
-
-#define INFO(a, ...)                                                           \
-  { printf("[INFO]: " a "\n", __VA_ARGS__); }
-
-#define ERROR(a, ...)                                                          \
-  { printf("[ERROR]: " a "\n", ##__VA_ARGS__); }
+// Logging macros
+#include "../helpers/logging.h"
 
 #define BUF_SIZE 512
 
