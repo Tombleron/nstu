@@ -21,9 +21,11 @@ int main(int argc, char **argv) {
   for (int i = 0; i < argc - 2; i++) {
     DBG("Starting new child process.");
     if ((pids[i] = fork()) == 0) {
+
       DBG(" <%d> Running executable with <%s %s> arguments.", getpid(),
           argv[i + 2], argv[1]);
       INFO("Starting new child.");
+
       if (execl("./child.out", "child.out", argv[i + 2], argv[1], NULL) < 0) {
         ERROR(" <%d> Error starting executable.", getpid());
         exit(-10);
@@ -40,8 +42,7 @@ int main(int argc, char **argv) {
     int pid = waitpid(pids[i], &status, 0);
 
     if (pids[i] == pid) {
-      INFO("File %s done,  result=%d\n", argv[i+2], WEXITSTATUS(status));
+      INFO("File %s done,  result=%d\n", argv[i + 2], WEXITSTATUS(status));
     }
-
   }
 }
