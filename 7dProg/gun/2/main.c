@@ -71,7 +71,6 @@ int main(int argc, char **argv) {
   DBG("Trying to process files.");
 
   char buffer[BUF_SIZE];
-
 #ifdef DYNAMIC
   DBG("Trying to open dynamic library.")
   void *ext_lib = dlopen("./lib.so", RTLD_LAZY);

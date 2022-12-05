@@ -42,4 +42,10 @@ mother(M, C):- parent(M, C), woman(M).
 
 child(C, P):- parent(P, C).
 
+son(S, P):- child(S, P), man(S).
+daughter(D, P):- child(D, P), woman(D).
+
+sister(S, B):- parent(P, S), parent(P, B), woman(S).
+brother(B, S):- parent(P, S), parent(P, B), man(B).
+
 grandchild(G, P):- child(G, H), child(H, P).

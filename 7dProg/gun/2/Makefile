@@ -1,8 +1,8 @@
 build_static:
-	gcc -Wall -c lib.c
-	gcc -Wall -c main.c
-	gcc -o main.out main.o lib.o
-	rm lib.o main.o
+	gcc -c -fPIC -Wall lib.c
+	gcc -shared -o libname.so lib.o
+	gcc -g -Wall -o main.out main.c -L. -lname
+	rm lib.o
 
 build_static_debug:
 	gcc -Wall -DDEBUG -c lib.c
@@ -23,7 +23,7 @@ build_dynamic_debug:
 	rm lib.o
 
 run:
-	./main.out input_file 0
+	LD_LIBRARY_PATH=. ./main.out input_file 0
 
 help:
 	@echo -e "build_static\t\t\tcompile project with static library without debug prints"
