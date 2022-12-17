@@ -14,5 +14,6 @@ pub trait Selectable {
 
 pub trait IntoTable {
     fn build(ui: &mut Ui) -> Table;
-    fn create_table(ui: &mut Ui, conn: &mut PooledConn);
+    fn display_table(ui: &mut Ui, conn: &mut PooledConn);
+    fn insert_row(&mut self, ui: &mut Ui, conn: &mut PooledConn);
 }
