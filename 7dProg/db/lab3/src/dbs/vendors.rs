@@ -7,9 +7,9 @@ use eframe::{
 use egui_extras::{Size, Table, TableBuilder};
 use mysql::{prelude::*, PooledConn};
 
-use super::{IntoTable, Selectable};
+use super::{IntoTable, Selectable, TableError};
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct Vendors {
     vendor_id: String,
     surname: String,
@@ -104,7 +104,7 @@ impl IntoTable for Vendors {
         });
     }
 
-    fn insert_row(&mut self, ui: &mut Ui, conn: &mut PooledConn) {
+    fn insert_row(&mut self, ui: &mut Ui, conn: &mut PooledConn) -> Result<(), TableError>{
         let mut vend_builder = VendorsBuilder::new();
         ui.horizontal(|ui| {
             ui.label("Vendor Id: ");
@@ -157,7 +157,11 @@ impl IntoTable for Vendors {
                 value.city
             )).unwrap();
             *self = Self::default();
+
+            return Ok(());
         }
+
+        Err(TableError::Dummy)
     }
 }
 

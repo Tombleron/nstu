@@ -8,9 +8,9 @@ use egui_extras::{Size, Table, TableBuilder};
 use mysql::{prelude::*, PooledConn};
 // use mysql::*;
 
-use super::{IntoTable, Selectable};
+use super::{IntoTable, Selectable, TableError};
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct Parts {
     part_id: String,
     part_name: String,
@@ -122,7 +122,7 @@ impl IntoTable for Parts {
         });
     }
 
-    fn insert_row(&mut self, ui: &mut Ui, conn: &mut PooledConn) {
+    fn insert_row(&mut self, ui: &mut Ui, conn: &mut PooledConn) -> Result<(), TableError>{
         let mut part_builder = PartsBuilder::new();
         ui.horizontal(|ui| {
             ui.label("Part Id: ");
@@ -181,7 +181,11 @@ impl IntoTable for Parts {
                 value.city
             )).unwrap();
             *self = Self::default();
+
+            return Ok(())
         }
+
+        Err(TableError::Dummy)
     }
 }
 

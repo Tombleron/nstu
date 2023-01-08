@@ -7,9 +7,9 @@ use eframe::{
 use egui_extras::{Size, Table, TableBuilder};
 use mysql::{prelude::*, PooledConn};
 
-use super::{parts::Parts, products::Products, vendors::Vendors, IntoTable, Selectable};
+use super::{parts::Parts, products::Products, vendors::Vendors, IntoTable, Selectable, TableError};
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct Supply {
     id: usize,
     vendor_id: String,
@@ -108,7 +108,7 @@ impl IntoTable for Supply {
         });
     }
 
-    fn insert_row(&mut self, ui: &mut Ui, conn: &mut PooledConn) {
+    fn insert_row(&mut self, ui: &mut Ui, conn: &mut PooledConn) -> Result<(), TableError> {
         ui.horizontal(|ui| {
             ui.label("Vendor Id: ");
             egui::ComboBox::from_id_source(120)
@@ -171,7 +171,11 @@ impl IntoTable for Supply {
                 value.count
             )).unwrap();
             *self = Self::default();
+
+            return Ok(())
         }
+
+        Err(TableError::Dummy)
     }
 }
 

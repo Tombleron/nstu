@@ -7,9 +7,9 @@ use eframe::{
 use egui_extras::{Size, Table, TableBuilder};
 use mysql::{prelude::*, PooledConn};
 
-use super::{IntoTable, Selectable};
+use super::{IntoTable, Selectable, TableError};
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct Products {
     product_id: String,
     product_name: String,
@@ -95,7 +95,7 @@ impl IntoTable for Products {
         });
     }
 
-    fn insert_row(&mut self, ui: &mut Ui, conn: &mut PooledConn) {
+    fn insert_row(&mut self, ui: &mut Ui, conn: &mut PooledConn) -> Result<(), TableError> {
         let mut product_builder = ProductsBuilder::new();
         ui.horizontal(|ui| {
             ui.label("Product Id: ");
@@ -141,7 +141,11 @@ impl IntoTable for Products {
             ))
             .unwrap();
             *self = Self::default();
+
+            return Ok(());
         }
+
+        Err(TableError::Dummy)
     }
 }
 

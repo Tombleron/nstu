@@ -11,7 +11,7 @@ use mysql::*;
 use std::fmt::Display;
 
 struct MyApp {
-    state: States,
+    state: TableExplorer,
     conn: PooledConn,
 }
 
@@ -31,17 +31,18 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         "lab3",
         options,
         Box::new(|_cc| {
-            Box::new(MyApp::new(
-                States::View(Tables::Supply(Supply::default())),
-                conn,
-            ))
+            let a = TableExplorer {
+                state: States::View(Tables::Supply(Supply::default())),
+                dialog: false,
+            };
+            Box::new(MyApp::new(a, conn))
         }),
     );
 
     Ok(())
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum Tables {
     Supply(Supply),
     Vendors(Vendors),
@@ -60,23 +61,33 @@ impl Display for Tables {
     }
 }
 
-#[derive(Debug)]
+struct TableExplorer {
+    state: States,
+    dialog: bool,
+}
+
+#[derive(Debug, Clone)]
 enum States {
     View(Tables),
     Insert(Tables),
     Search,
 }
 
-impl States {
+impl TableExplorer {
     pub fn update(&mut self, ctx: &egui::Context, conn: &mut PooledConn) {
         // Generic code for all states
-        match self {
-            States::View(table) => States::view(ctx, conn, table),
-            States::Insert(table) => States::insert(ctx, conn, table),
+        match self.state {
+            States::View(_) => self.view(ctx, conn),
+            States::Insert(_) => self.insert(ctx, conn),
             States::Search => self.search(ctx, conn),
         }
     }
-    fn view(ctx: &egui::Context, conn: &mut PooledConn, table: &Tables) {
+    fn view(&mut self, ctx: &egui::Context, conn: &mut PooledConn) {
+        let table = match &self.state {
+            States::View(table) => table,
+            _ => unreachable!(),
+        };
+
         egui::CentralPanel::default().show(ctx, |ui| match table {
             Tables::Supply(_) => {
                 Supply::display_table(ui, conn);
@@ -93,37 +104,55 @@ impl States {
         });
     }
 
-    fn insert(ctx: &egui::Context, conn: &mut PooledConn, table: &mut Tables) {
-        egui::CentralPanel::default().show(ctx, |ui| match table {
-            Tables::Supply(table) => {
-                table.insert_row(ui, conn);
+    fn insert(&mut self, ctx: &egui::Context, conn: &mut PooledConn) {
+        // FIXME: this is ugly
+        let dialog = match &mut self.state {
+            States::Insert(ref mut table) => {
+                egui::CentralPanel::default()
+                    .show(ctx, |ui| match table {
+                        Tables::Supply(ref mut table) => table.insert_row(ui, conn),
+                        Tables::Parts(ref mut table) => table.insert_row(ui, conn),
+                        Tables::Vendors(ref mut table) => table.insert_row(ui, conn),
+                        Tables::Products(ref mut table) => table.insert_row(ui, conn),
+                    })
+                    .inner
             }
-            Tables::Parts(table) => {
-                table.insert_row(ui, conn);
-            }
-            Tables::Vendors(table) => {
-                table.insert_row(ui, conn);
-            }
-            Tables::Products(table) => {
-                table.insert_row(ui, conn);
-            }
-        });
+            _ => unreachable!(),
+        };
+
+        self.dialog = match dialog {
+            Ok(_) => true,
+            Err(_) => false,
+        } || self.dialog;
+
+        if self.dialog {
+            egui::Window::new("Вставка успешно выполнена.")
+                .collapsible(false)
+                .resizable(false)
+                .show(ctx, |ui| {
+                    ui.horizontal(|ui| {
+                        if ui.button("Ok?").clicked() {
+                            self.dialog = false;
+                        };
+                    });
+                });
+        }
     }
 
     fn search(&self, ctx: &egui::Context, _conn: &mut PooledConn) {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("lab3");
-            ui.label(format!("State: {:?}", self));
+            ui.label(format!("State: {:?}", self.state));
         });
     }
 }
 
 impl MyApp {
-    fn new(state: States, conn: PooledConn) -> Self {
+    fn new(state: TableExplorer, conn: PooledConn) -> Self {
         Self { state, conn }
     }
     fn change_state(&mut self, state: States) {
-        self.state = state
+        self.state.state = state
     }
 }
 
