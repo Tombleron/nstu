@@ -32,7 +32,6 @@ void *thread_func(void *arg) {
   int inputFile, outputFile;
   // Имя выходного файла (или путь к нему)
   char outputFileName[BUFFER_SIZE];
-
   // Открытие входного файла
   inputFile = open(msg->content, O_RDONLY);
   if (inputFile == -1) {
